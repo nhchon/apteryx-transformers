@@ -5,10 +5,10 @@ import torch
 from transformers import TrainingArguments
 from transformers import Trainer
 
-from datasets import BalancedDataset
-from collators import DataCollatorForDocumentClassificationBATCH
-from utils.smooth_gradient import SmoothGradient
+from .smooth_gradient import SmoothGradient
 
+from ..datasets import BalancedDataset
+from ..collators import DataCollatorForDocumentClassificationBATCH
 
 # ----------------------------------------------------------------------------------------------------------------------------------
 
