@@ -22,7 +22,14 @@ class Visualizer:
         self.criterion = torch.nn.CrossEntropyLoss()
         self.collator = DataCollatorForDocumentClassificationBATCH()
 
-    def visualize(self, txt, label, threshold=.7):
+    def visualize(self, txt, threshold=.7):
+        '''
+        :param txt: Document text. A string.
+        :param threshold: Percentage of significance to report.
+        :return: A colored HTML string.
+        '''
+        label = -1 #Only needed for underlying datashape. Should always be -1.
+
         ids = self.tokenizer(txt, add_special_tokens=False)['input_ids']
         chunked_data = [(self.tokenizer.decode(ids[i:i + self.window_size]), label)
                         for i in range(0, len(ids), self.window_size)]
