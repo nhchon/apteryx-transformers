@@ -1,8 +1,55 @@
+import gzip
+import os
+import numpy as np
+
 import torch
 from torch.utils.data.dataset import Dataset
 from tqdm import tqdm
 from pathlib import Path
 import dill as pickle
+import json
+
+
+class NLDJSON_DIR_Dataset(Dataset):
+    def __init__(self, data_dir, extract_op, tokenizer, block_size: int, limit=None, glob_pattern='*'):
+        self.block_size = block_size
+        self.tok = tokenizer
+
+        files = Path(data_dir).glob(glob_pattern)
+        print('Ingesting data!')
+        self.txt, self.labels = self.get_data(files, extract_op)
+
+    def __len__(self):
+        return len(self.txt)
+
+    def __getitem__(self, item):
+        d = self.tok(self.txt[item],
+                     padding='max_length',
+                     truncation=True,
+                     max_length=self.block_size,
+                     return_tensors='pt',
+                     add_special_tokens=False)
+        d['labels'] = self.labels[item]
+        return d
+
+    def get_data(self, files, extract_op, limit):
+        '''
+        Extracts relevant data from a list of files
+        :param files: a list of nldjs files
+        :param extract_op: a function or lambda expression to extract (x,y) data (a tuple) from a json example.
+        :param limit: the number of examples to extract.
+        :return: (x,y) lists of data.
+        '''
+        acc = 0
+        jdata = []
+        for f in files:
+            with open(f, 'r') as fbuf:
+                for l in tqdm(fbuf.readlines()):
+                    if acc < limit:
+                        jdata.append(extract_op(json.loads(l)))
+                        acc += 1
+                    else:
+                        return zip(*jdata)
 
 
 class BalancedDataset(Dataset):
@@ -22,7 +69,7 @@ class BalancedDataset(Dataset):
                      truncation=True,
                      max_length=self.block_size,
                      return_tensors='pt',
-                     add_special_tokens = False)
+                     add_special_tokens=False)
         d['labels'] = self.labels[item]
         return d
 
@@ -174,7 +221,8 @@ class PickleDatasetByClass(Dataset):
             assert len(self.class_to_patent_map[
                            _class]) > self.per_class_limit, f"Make sure per_class_limit is less than {self.class_to_patent_map[_class]}."
 
-            self.class_to_patent_map[_class] = np.random.choice(self.class_to_patent_map[_class], size=self.per_class_limit, replace=False)
+            self.class_to_patent_map[_class] = np.random.choice(self.class_to_patent_map[_class],
+                                                                size=self.per_class_limit, replace=False)
 
     def __len__(self):
         return self.num_classes * self.per_class_limit
@@ -203,7 +251,7 @@ class PickleDatasetByClass(Dataset):
 
 
 class GzippedPickleDatasetByClass(PickleDatasetByClass):
-    def __init__(self, gz_index_path, data_dir, tokenizer, block_size, per_class_limit):
+    def __init__(self, gz_index_path, data_dir, tokenizer, block_size, per_class_limit, absolute_limit=None):
         assert 'by_class' in str(gz_index_path), 'Not using a _by_class dataset!'
         self.block_size = block_size
         self.tokenizer = tokenizer
@@ -213,7 +261,12 @@ class GzippedPickleDatasetByClass(PickleDatasetByClass):
         with gzip.open(self.gz_index_path, 'rb') as f:
             self.class_to_patent_map = pickle.load(f)
         self.num_classes = len(self.class_to_patent_map)
-        self.per_class_limit = per_class_limit
+
+        if absolute_limit:
+            print('absolute_limit used - overriding per_class_limit if provided.')
+            self.per_class_limit = int(absolute_limit / self.num_classes)
+        else:
+            self.per_class_limit = per_class_limit
 
         print('Randomizing and truncating data...')
         for _class in tqdm(range(self.num_classes)):
