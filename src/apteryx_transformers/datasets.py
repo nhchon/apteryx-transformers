@@ -11,26 +11,32 @@ import json
 
 
 class NLDJSON_DIR_Dataset(Dataset):
-    def __init__(self, data_dir, extract_op, tokenizer, block_size: int, limit=None, glob_pattern='*'):
+    def __init__(self, data_dir, extract_op, tokenizer, block_size: int, limit=None, glob_pattern='*', tok_labels = False):
         self.block_size = block_size
         self.tok = tokenizer
-
+        self.tok_labels = tok_labels
         files = Path(data_dir).glob(glob_pattern)
         print('Ingesting data!')
-        self.txt, self.labels = self.get_data(files, extract_op)
+        self.txt, self.labels = self.get_data(files, extract_op, limit)
 
     def __len__(self):
         return len(self.txt)
 
     def __getitem__(self, item):
-        d = self.tok(self.txt[item],
+        d = self.tokenize(self.txt[item])
+        if self.tok_labels:
+            d['labels'] = self.tokenize(self.labels[item])['input_ids']
+        else:
+            d['labels'] = self.labels[item]
+        return d
+
+    def tokenize(self, txt):
+        return self.tok(txt,
                      padding='max_length',
                      truncation=True,
                      max_length=self.block_size,
                      return_tensors='pt',
                      add_special_tokens=False)
-        d['labels'] = self.labels[item]
-        return d
 
     def get_data(self, files, extract_op, limit):
         '''
