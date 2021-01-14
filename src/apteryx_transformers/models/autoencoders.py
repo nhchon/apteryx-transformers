@@ -28,9 +28,12 @@ class AbstractTransformerAutoencoder(ABC):
         self.n_layers_to_train = n_layers_to_train
 
         self.tokenizer = self.get_tokenizer_class().from_pretrained(self.model_name)
-        self.collator = self.get_collator_class()
+        self.collator = self.get_collator_class()()
         self.dataset = dataset
-        self.config = self.get_config_class()(**model_config_dict)
+        self.config = self.get_config_class()(**model_config_dict) if model_config_dict else self.get_config_class()()
+
+        print(type(self.config))
+        print(self.config)
 
         self.model = self.get_model_class()(config=self.config)
 
@@ -79,7 +82,7 @@ class AbstractTransformerAutoencoder(ABC):
                 for p in layer.parameters():
                     p.requires_grad = False
                 layer_acc += 1
-            for layer in self.model.base_model.encoder.layer[-self.n_layers_to_train:]:
+            for layer in module[-n_to_train:]:
                 print(f'Layer {layer_acc}: ON')
                 for p in layer.parameters():
                     p.requires_grad = True
