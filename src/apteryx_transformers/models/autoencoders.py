@@ -17,6 +17,8 @@ import os
 
 from typing import Union
 
+from ..collators import DataCollatorForAutoencodersBATCH
+
 
 class AbstractTransformerAutoencoder(ABC):
     def __init__(self, dataset, model_name: str, model_config_dict: dict, training_args_dict: dict, block_size: int,
@@ -159,10 +161,11 @@ class AbstractTransformerAutoencoder(ABC):
 
 
 class T5Autoencoder(AbstractTransformerAutoencoder):
-    def __init__(self, data_dir, model_name='t5-base', block_size=1024,
-                 training_args_dict=None, ds_limit=np.inf, train_pct=0.8,
+    def __init__(self, dataset, model_name='t5-base', block_size=1024, model_config_dict=None,
+                 training_args_dict=None, train_pct=0.8,
                  n_layers_to_train=(-1, -1)):
-        super().__init__(data_dir, model_name, block_size, training_args_dict, ds_limit, train_pct=train_pct,
+        super().__init__(dataset, model_name, model_config_dict,
+                         training_args_dict, block_size, train_pct=train_pct,
                          n_layers_to_train=n_layers_to_train)
 
     def get_model_class(self):
@@ -175,4 +178,4 @@ class T5Autoencoder(AbstractTransformerAutoencoder):
         return T5Config
 
     def get_collator_class(self):
-        pass
+        return DataCollatorForAutoencodersBATCH
