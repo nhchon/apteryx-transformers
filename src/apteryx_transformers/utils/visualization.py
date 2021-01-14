@@ -14,13 +14,14 @@ from ..collators import DataCollatorForDocumentClassificationBATCH
 
 
 class Visualizer:
-    def __init__(self, model, tokenizer, window_size, output_dir):
+    def __init__(self, model, tokenizer, window_size, output_dir, class_map:dict):
         self.model = model
         self.tokenizer = tokenizer
         self.window_size = window_size
         self.base_output_dir = output_dir
         self.criterion = torch.nn.CrossEntropyLoss()
         self.collator = DataCollatorForDocumentClassificationBATCH()
+        self.class_map = class_map
 
     def visualize(self, txt, threshold=.7):
         '''
@@ -51,7 +52,7 @@ class Visualizer:
         result = list()
         for i in instances:
             if i['prob'] > threshold:
-                colored_string = smooth_grad.colorize(i)
+                colored_string = smooth_grad.colorize(i, self.class_map)
                 result.append(colored_string)
                 # TODO 34: do something with this
         return result

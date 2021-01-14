@@ -84,7 +84,7 @@ class SaliencyInterpreter:
             embedding_layer = getattr(self.model, encoder_attribute).embeddings
         return embedding_layer
 
-    def colorize(self, instance, skip_special_tokens=False):
+    def colorize(self, instance, class_map, skip_special_tokens=False):
 
         special_tokens = self.special_tokens
 
@@ -102,7 +102,7 @@ class SaliencyInterpreter:
             word = word.replace("Ċ", "\n")
             color = matplotlib.colors.rgb2hex(color[:3])
             colored_string += template.format(color, word)
-        colored_string += template.format(0, "    Label: {} |".format(instance['label']))
+        colored_string += template.format(0, "    Label: {} |".format(class_map[int(instance['label'])]))
         prob = instance['prob']
         color = matplotlib.colors.rgb2hex(prob_cmap(prob)[:3])
         colored_string += template.format(color, "{:.2f}%".format(instance['prob']*100)) + '|'
