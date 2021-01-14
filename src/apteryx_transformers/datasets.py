@@ -50,6 +50,7 @@ class NLDJSON_DIR_Dataset(Dataset):
         acc = 0
         jdata = []
         for f in files:
+            print(f'{acc} examples loaded so far.')
             with open(f, 'r') as fbuf:
                 for l in tqdm(fbuf.readlines()):
                     if acc < limit:
