@@ -11,7 +11,8 @@ import json
 
 
 class NLDJSON_DIR_Dataset(Dataset):
-    def __init__(self, data_dir, extract_op, tokenizer, block_size: int, limit=None, glob_pattern='*', tok_labels = False):
+    def __init__(self, data_dir, extract_op, tokenizer, block_size: int, limit=None, glob_pattern='*',
+                 tok_labels=False):
         self.block_size = block_size
         self.tok = tokenizer
         self.tok_labels = tok_labels
@@ -32,11 +33,11 @@ class NLDJSON_DIR_Dataset(Dataset):
 
     def tokenize(self, txt):
         return self.tok(txt,
-                     padding='max_length',
-                     truncation=True,
-                     max_length=self.block_size,
-                     return_tensors='pt',
-                     add_special_tokens=False)
+                        padding='max_length',
+                        truncation=True,
+                        max_length=self.block_size,
+                        return_tensors='pt',
+                        add_special_tokens=False)
 
     def get_data(self, files, extract_op, limit):
         '''
