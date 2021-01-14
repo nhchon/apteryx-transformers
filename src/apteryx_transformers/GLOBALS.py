@@ -1,3 +1,5 @@
+MESSAGE='Hello, world!'
+
 TC_CLASS_MAP = {
     0: '2800 - Semiconductors/Memory, Circuits/Measuring and Testing, Optics/Photocopying, Printing/Measuring and Testing',
     1: '1600 - Biotechnology and Organic Chemistry',
