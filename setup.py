@@ -35,7 +35,7 @@ setup(
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='git@github.com:apteryxlabs/apteryx_transformers.git',
-    python_requires='>=3.7',
+    python_requires='>=3.6',
     keywords='transformers',
     project_urls={
         'Website': 'https://apteryxlabs.com'
