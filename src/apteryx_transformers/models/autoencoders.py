@@ -37,6 +37,8 @@ class AbstractTransformerAutoencoder(ABC):
         print(self.config)
 
         self.model = self.get_model_class()(config=self.config)
+        self.encoder = self.model.encoder
+        self.decoder = self.model.decoder
 
         self.n_enc_layers = len(self.model.encoder.block)
         self.n_dec_layers = len(self.model.decoder.block)
@@ -88,6 +90,13 @@ class AbstractTransformerAutoencoder(ABC):
                 for p in layer.parameters():
                     p.requires_grad = True
                 layer_acc += 1
+
+    def encode(self, inputs):
+        return self.encoder(**inputs)
+
+    def temporal_agg(self, encoder_last_hidden_states, attention_masks):
+        pass
+
 
     def get_trainer(self):
 
@@ -154,7 +163,7 @@ class AbstractTransformerAutoencoder(ABC):
         pass
 
 
-class T5Autoencoder(AbstractTransformerAutoencoder):
+class T5AutoEncoder(AbstractTransformerAutoencoder):
     def __init__(self, dataset, model_name='t5-base', block_size=1024, model_config_dict=None,
                  training_args_dict=None, train_pct=0.8,
                  n_layers_to_train=(-1, -1)):
