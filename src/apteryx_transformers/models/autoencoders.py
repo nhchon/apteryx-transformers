@@ -20,6 +20,9 @@ from .t5variants import T5EncoderAggDecoder
 
 class AbstractTransformerAutoencoder(ABC):
     def __init__(self, dataset, model_name: str, model_config_dict: dict, training_args_dict: dict, block_size: int,
+                 encoding_vector_size=512,
+                 agg=True,
+                 agg_mode='linear',
                  train_pct: float = .8, n_layers_to_train: Union[tuple, int] = 0):
         '''
 
@@ -44,7 +47,10 @@ class AbstractTransformerAutoencoder(ABC):
         # print(type(self.config))
         print(self.config)
 
-        self.model = self.get_model_class()(config=self.config, block_size=self.block_size)
+        self.model = self.get_model_class()(config=self.config, block_size=self.block_size,
+                                            encoding_vector_size=encoding_vector_size,
+                                            agg=agg,
+                                            agg_mode=agg_mode)
         self.encoder = self.model.encoder
         self.decoder = self.model.decoder
 
@@ -52,10 +58,9 @@ class AbstractTransformerAutoencoder(ABC):
         self.n_dec_layers = len(self.model.decoder.block)
         self.total_attn_layers = self.n_enc_layers + self.n_dec_layers
 
-
         if isinstance(self.n_layers_to_train, tuple):
             if self.n_layers_to_train == (-1, -1):
-                #In the case of (-1, -1), EVERYTHING requires grad.
+                # In the case of (-1, -1), EVERYTHING requires grad.
                 for p in self.model.parameters():
                     p.requires_grad = True
             else:
@@ -77,7 +82,7 @@ class AbstractTransformerAutoencoder(ABC):
         else:
             # Turn all grads off except the final classification layer
             for i, p in enumerate(self.model.parameters()):
-                #print(f'Layer {i}: OFF')
+                # print(f'Layer {i}: OFF')
                 p.requires_grad = False
 
         print(f'Autoencoder initialized; training lm_head and {self.n_layers_to_train} Attention Layers.')
@@ -104,7 +109,6 @@ class AbstractTransformerAutoencoder(ABC):
                 for p in layer.parameters():
                     p.requires_grad = True
                 layer_acc += 1
-
 
     def get_trainer(self):
 
@@ -172,11 +176,19 @@ class AbstractTransformerAutoencoder(ABC):
 
 
 class T5AutoEncoder(AbstractTransformerAutoencoder):
-    def __init__(self, dataset, model_name='t5-base', block_size=1024, model_config_dict=None,
+    def __init__(self, dataset, model_name='t5-base', block_size=1024,
+                 encoding_vector_size=512,
+                 agg=True,
+                 agg_mode='linear',
+                 model_config_dict=None,
                  training_args_dict=None, train_pct=0.8,
                  n_layers_to_train=(-1, -1)):
         super().__init__(dataset, model_name, model_config_dict,
-                         training_args_dict, block_size, train_pct=train_pct,
+                         training_args_dict, block_size,
+                         encoding_vector_size=encoding_vector_size,
+                         agg=agg,
+                         agg_mode=agg_mode,
+                         train_pct=train_pct,
                          n_layers_to_train=n_layers_to_train)
 
     def get_model_class(self):
