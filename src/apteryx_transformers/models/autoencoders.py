@@ -2,12 +2,20 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Union
 
+import torch
 from torch.utils import data
 from transformers import (T5ForConditionalGeneration, T5Config, T5TokenizerFast)
 from transformers import (Trainer,
                           TrainingArguments)
+from transformers.modeling_outputs import (
+    BaseModelOutput,
+    BaseModelOutputWithPastAndCrossAttentions,
+    Seq2SeqLMOutput,
+    Seq2SeqModelOutput,
+)
 
 from ..collators import DataCollatorForAutoencodersBATCH
+from .t5variants import T5EncoderAggDecoder
 
 
 class AbstractTransformerAutoencoder(ABC):
@@ -24,19 +32,19 @@ class AbstractTransformerAutoencoder(ABC):
         :param n_layers_to_train: The number of attention layers to train. If a tuple, specifies for encoder and decoder separately.
         '''
         self.model_name = model_name
-        self.block_size = block_size
-        self.n_layers_to_train = n_layers_to_train
-
         self.tokenizer = self.get_tokenizer_class().from_pretrained(self.model_name)
         self.collator = self.get_collator_class()()
         self.dataset = dataset
+        self.block_size = self.dataset.block_size
+        self.n_layers_to_train = n_layers_to_train
+
         self.config = self.get_config_class()(**model_config_dict) if model_config_dict else self.get_config_class()()
         self.config.decoder_start_token_id = self.tokenizer.pad_token_id
 
-        #print(type(self.config))
+        # print(type(self.config))
         print(self.config)
 
-        self.model = self.get_model_class()(config=self.config)
+        self.model = self.get_model_class()(config=self.config, block_size=self.block_size)
         self.encoder = self.model.encoder
         self.decoder = self.model.decoder
 
@@ -91,26 +99,6 @@ class AbstractTransformerAutoencoder(ABC):
                     p.requires_grad = True
                 layer_acc += 1
 
-    def encode(self, inputs, agg = True):
-        res = self.encoder(input_ids=inputs['input_ids'],
-                     attention_mask=inputs['attention_mask']).last_hidden_state
-        if agg:
-            res = self.temporal_agg(res, inputs['attention_mask'])
-
-        return res
-
-    def temporal_agg(self, encoder_last_hidden_states, attention_masks):
-        # Copy mask along d_model axis (the third one)
-        masks_expanded = attention_masks[:, :, None].repeat(1, 1, self.config.d_model)
-
-        # elementwise multiplication of enc last hidden state with mask,
-        # which should remove irrelevant states (those which were masked) from the average.
-        hidden_masked_summed = encoder_last_hidden_states.mul(masks_expanded).sum(1)
-
-        # Average, dividing by total unmasked tokens (time axis, e.g. the second)
-        masked_time_agg = hidden_masked_summed.div(masks_expanded.sum(1))
-
-        return masked_time_agg[:,None,:]
 
 
     def get_trainer(self):
@@ -187,7 +175,7 @@ class T5AutoEncoder(AbstractTransformerAutoencoder):
                          n_layers_to_train=n_layers_to_train)
 
     def get_model_class(self):
-        return T5ForConditionalGeneration
+        return T5EncoderAggDecoder
 
     def get_tokenizer_class(self):
         return T5TokenizerFast
