@@ -52,13 +52,19 @@ class AbstractTransformerAutoencoder(ABC):
         self.n_dec_layers = len(self.model.decoder.block)
         self.total_attn_layers = self.n_enc_layers + self.n_dec_layers
 
-        if isinstance(self.n_layers_to_train, tuple):
-            n_enc_to_train, n_dec_to_train = self.n_layers_to_train
-            assert n_enc_to_train <= self.n_enc_layers
-            assert n_dec_to_train <= self.n_dec_layers
 
-            self.toggle_layer_grad(self.model.encoder.block, n_enc_to_train, layer_acc=self.n_dec_layers)
-            self.toggle_layer_grad(self.model.decoder.block, n_dec_to_train)
+        if isinstance(self.n_layers_to_train, tuple):
+            if self.n_layers_to_train == (-1, -1):
+                #In the case of (-1, -1), EVERYTHING requires grad.
+                for p in self.model.parameters():
+                    p.requires_grad = True
+            else:
+                n_enc_to_train, n_dec_to_train = self.n_layers_to_train
+                assert n_enc_to_train <= self.n_enc_layers
+                assert n_dec_to_train <= self.n_dec_layers
+
+                self.toggle_layer_grad(self.model.encoder.block, n_enc_to_train, layer_acc=self.n_dec_layers)
+                self.toggle_layer_grad(self.model.decoder.block, n_dec_to_train)
 
         elif isinstance(self.n_layers_to_train, int) and self.n_layers_to_train > 0:
             assert self.total_attn_layers >= self.n_layers_to_train, f"You must select a number of layers to train less than the total number of layers in the model. You selected {self.n_layers_to_train}; there are {self.total_attn_layers} attention layers available."
@@ -71,7 +77,7 @@ class AbstractTransformerAutoencoder(ABC):
         else:
             # Turn all grads off except the final classification layer
             for i, p in enumerate(self.model.parameters()):
-                print(f'Layer {i}: OFF')
+                #print(f'Layer {i}: OFF')
                 p.requires_grad = False
 
         print(f'Autoencoder initialized; training lm_head and {self.n_layers_to_train} Attention Layers.')
@@ -98,7 +104,6 @@ class AbstractTransformerAutoencoder(ABC):
                 for p in layer.parameters():
                     p.requires_grad = True
                 layer_acc += 1
-
 
 
     def get_trainer(self):

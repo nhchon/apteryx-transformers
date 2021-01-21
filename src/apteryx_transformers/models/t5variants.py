@@ -20,9 +20,22 @@ from ..collators import DataCollatorForAutoencodersBATCH
 
 
 class T5EncoderAggDecoder(T5ForConditionalGeneration):
-    def __init__(self, config: T5Config, block_size = 512):
+    def __init__(self, config: T5Config,
+                 block_size=512,
+                 encoding_vector_size=512,
+                 agg=True,
+                 agg_mode='linear'):
         super(T5EncoderAggDecoder, self).__init__(config)
         self.block_size = block_size
+
+        self.agg = agg
+        self.agg_mode = agg_mode
+        print(f'AGG: {self.agg}, MODE: {self.agg_mode if self.agg else "N/A"}')
+        if self.agg and self.agg_mode == 'linear':
+            print('Using Linear Aggregation')
+            self.encoding_vector_size = encoding_vector_size
+            self.enc_to_vec = nn.Linear(self.block_size * self.config.d_model, encoding_vector_size)
+            self.vec_to_enc_hat = nn.Linear(encoding_vector_size, self.block_size * self.config.d_model)
 
     def forward(
             self,
@@ -49,15 +62,14 @@ class T5EncoderAggDecoder(T5ForConditionalGeneration):
 
         # Encode if needed (training, first prediction pass)
 
-        encoder_outputs = self.encode_w_agg(agg=agg,
-                                            # If encoder_outputs provided, will spit back out
-                                            encoder_outputs=encoder_outputs,
-                                            input_ids=input_ids,
-                                            attention_mask=attention_mask,
-                                            head_mask=head_mask,
-                                            output_attentions=output_attentions,
-                                            output_hidden_states=output_hidden_states,
-                                            return_dict=return_dict, )
+        encoder_outputs, dense_vector_encoding = self.encode_w_agg(  # If encoder_outputs provided, will spit back out
+            encoder_outputs=encoder_outputs,
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            head_mask=head_mask,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict, )
 
         hidden_states = encoder_outputs[0]
 
@@ -78,9 +90,10 @@ class T5EncoderAggDecoder(T5ForConditionalGeneration):
 
         sequence_output = decoder_outputs[0]
 
-        return self.lm_head_step(sequence_output, decoder_outputs, encoder_outputs, labels = labels, return_dict=return_dict)
+        return self.lm_head_step(sequence_output, decoder_outputs, encoder_outputs, labels=labels,
+                                 return_dict=return_dict)
 
-    def lm_head_step(self, sequence_output, decoder_outputs, encoder_outputs, labels = None, return_dict = False):
+    def lm_head_step(self, sequence_output, decoder_outputs, encoder_outputs, labels=None, return_dict=False):
         if self.config.tie_word_embeddings:
             # Rescale output before projecting on vocab
             # See https://github.com/tensorflow/mesh/blob/fa19d69eafc9a482aff0b59ddd96b025c0cb207d/mesh_tensorflow/transformer/transformer.py#L586
@@ -110,7 +123,7 @@ class T5EncoderAggDecoder(T5ForConditionalGeneration):
             encoder_attentions=encoder_outputs.attentions,
         )
 
-    def encode_w_agg(self, agg=True,
+    def encode_w_agg(self,
                      encoder_outputs=None,
                      input_ids=None,
                      attention_mask=None,
@@ -131,8 +144,10 @@ class T5EncoderAggDecoder(T5ForConditionalGeneration):
                 return_dict=return_dict,
             )
 
-            if agg:
-                encoder_outputs = self.temporal_agg(encoder_outputs, attention_mask)
+            if self.agg:
+                agg_outputs = self.temporal_agg(encoder_outputs, attention_mask)
+                encoder_outputs = agg_outputs['output_formatted_for_decoder']
+                dense_vector_encoding = agg_outputs['dense_vector_encoding']
 
         elif return_dict and not isinstance(encoder_outputs, BaseModelOutput):
             encoder_outputs = BaseModelOutput(
@@ -141,28 +156,52 @@ class T5EncoderAggDecoder(T5ForConditionalGeneration):
                 attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
             )
 
-        return encoder_outputs
+        return encoder_outputs, dense_vector_encoding
 
     def temporal_agg(self, encoder_outputs, attention_masks):
         encoder_last_hidden_states = encoder_outputs.last_hidden_state
-        # Copy mask along d_model axis (the third one)
-        masks_expanded = attention_masks[:, :, None].repeat(1, 1, self.config.d_model)
+        batch_size, seq_len, d_model = encoder_last_hidden_states.shape
 
-        # elementwise multiplication of enc last hidden state with mask,
-        # which should remove irrelevant states (those which were masked) from the average.
-        hidden_masked_summed = encoder_last_hidden_states.mul(masks_expanded).sum(1)
+        result = {'output_formatted_for_decoder': None,
+                  'dense_vector_encoding': None}
 
-        # Average, dividing by total unmasked tokens (time axis, e.g. the second)
-        masked_time_agg = hidden_masked_summed.div(masks_expanded.sum(1))
+        if self.agg_mode == 'mean':
+            # Copy mask along d_model axis (the third one)
+            masks_expanded = attention_masks[:, :, None].repeat(1, 1, d_model)
 
-        masked_time_agg_broadcast = masked_time_agg[:, None, :].repeat(1, self.block_size, 1)
+            # elementwise multiplication of enc last hidden state with mask,
+            # which should remove irrelevant states (those which were masked) from the average.
+            hidden_masked_summed = encoder_last_hidden_states.mul(masks_expanded).sum(1)
 
-        # Make sure to put back the time axis!
-        return BaseModelOutput(
-            last_hidden_state=masked_time_agg_broadcast,
-            hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
-            attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
-        )
+            # Average, dividing by total unmasked tokens (time axis, e.g. the second)
+            masked_time_agg = hidden_masked_summed.div(masks_expanded.sum(1))
+
+            masked_time_agg_broadcast = masked_time_agg[:, None, :].repeat(1, seq_len, 1)
+
+            # Make sure to put back the time axis!
+            result['output_formatted_for_decoder'] = BaseModelOutput(
+                last_hidden_state=masked_time_agg_broadcast,
+                hidden_states=encoder_outputs[1] if len(encoder_outputs) > 1 else None,
+                attentions=encoder_outputs[2] if len(encoder_outputs) > 2 else None,
+            )
+
+            result['dense_vector_encoding'] = masked_time_agg
+
+        elif self.agg_mode == 'linear':
+            # Stack each sequence embedding and project to an encoding vector
+            stacked = encoder_last_hidden_states.view(batch_size, seq_len * d_model)
+            dense_vector_encoding = self.enc_to_vec(stacked)  # (batch_size, self.encoding_vector_size)
+            result['dense_vector_encoding'] = dense_vector_encoding
+            encoder_output_hat = self.vec_to_enc_hat(dense_vector_encoding).view(batch_size, seq_len,
+                                                                                 d_model)  # (batch_size, seq_len, d_model)
+
+            result['output_formatted_for_decoder'] = BaseModelOutput(last_hidden_state=encoder_output_hat,
+                                                                     hidden_states=encoder_outputs[1] if len(
+                                                                         encoder_outputs) > 1 else None,
+                                                                     attentions=encoder_outputs[2] if len(
+                                                                         encoder_outputs) > 2 else None, )
+
+        return result
 
     def _shift_right(self, input_ids):
         # In T5 decoder_start_token_id is usually set to the pad_token_id.
@@ -206,7 +245,6 @@ class T5EncoderAggDecoder(T5ForConditionalGeneration):
             assert labels is None, "Decoder should not use cached key value states when training."
             if decoder_input_ids is not None:
                 decoder_input_ids = decoder_input_ids[:, -1:]
-
 
         return self.decoder(input_ids=decoder_input_ids,
                             attention_mask=decoder_attention_mask,
