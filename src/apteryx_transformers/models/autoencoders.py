@@ -19,7 +19,7 @@ from .t5variants import T5EncoderAggDecoder
 
 
 class AbstractTransformerAutoencoder(ABC):
-    def __init__(self, dataset, model_name: str, model_config_dict: dict, training_args_dict: dict, block_size: int,
+    def __init__(self, dataset, tokenizer, model_name: str, model_config_dict: dict, training_args_dict: dict, block_size: int,
                  encoding_vector_size=512,
                  agg=True,
                  agg_mode='linear',
@@ -35,7 +35,7 @@ class AbstractTransformerAutoencoder(ABC):
         :param n_layers_to_train: The number of attention layers to train. If a tuple, specifies for encoder and decoder separately.
         '''
         self.model_name = model_name
-        self.tokenizer = self.get_tokenizer_class().from_pretrained(self.model_name)
+        self.tokenizer = tokenizer if tokenizer else self.get_tokenizer_class().from_pretrained(self.model_name)
         self.collator = self.get_collator_class()()
         self.dataset = dataset
         self.block_size = self.dataset.block_size
