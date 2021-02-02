@@ -185,8 +185,8 @@ class T5AutoEncoder(AbstractTransformerAutoencoder):
                  model_config_dict=None,
                  training_args_dict=None, train_pct=0.8,
                  n_layers_to_train=(-1, -1)):
-        super().__init__(dataset, model_name, model_config_dict,
-                         training_args_dict, block_size,
+        super().__init__(dataset=dataset, model_name=model_name, model_config_dict=model_config_dict,
+                         training_args_dict=training_args_dict, block_size=block_size,
                          encoding_vector_size=encoding_vector_size,
                          tokenizer=tokenizer,
                          agg=agg,
