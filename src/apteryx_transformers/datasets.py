@@ -37,34 +37,33 @@ class AutoEncoder_JSONL_Dataset(Dataset):
         for file_n, file in enumerate(files):
             print(f'File {file_n}: {file}')
             print(f'{acc} processed so far.')
-            while acc < self.DS_LIMIT:
-                with open(file, 'r') as f:
-                    for line in tqdm(f.readlines()):
+            with open(file, 'r') as f:
+                for line in tqdm(f.readlines()):
+                    if acc < self.DS_LIMIT:
+                        l = extract_op(json.loads(line))
 
-                            l = extract_op(json.loads(line))
+                        enc = self.tok(l, return_tensors='pt')
+                        ids = enc.input_ids
 
-                            enc = self.tok(l, return_tensors='pt')
-                            ids = enc.input_ids
+                        i_len = ids.shape[-1]
+                        n_blocks = (i_len // self.BLOCK_SIZE)
+                        trunc_len = n_blocks * self.BLOCK_SIZE
 
-                            i_len = ids.shape[-1]
-                            n_blocks = (i_len // self.BLOCK_SIZE)
-                            trunc_len = n_blocks * self.BLOCK_SIZE
+                        # Chunked ids
+                        jdata.extend(self.tok.batch_decode((ids[:, :trunc_len].view(n_blocks, self.BLOCK_SIZE))))
 
-                            # Chunked ids
-                            jdata.extend(self.tok.batch_decode((ids[:, :trunc_len].view(n_blocks, self.BLOCK_SIZE))))
+                        acc += n_blocks
+                    else:
+                        tokenized = self.tok(jdata, padding='max_length',
+                                        truncation=True,
+                                        max_length=self.block_size,
+                                        return_tensors='pt',
+                                        add_special_tokens=False)
 
-                            acc += n_blocks
+                        #Add labels for autoencoder!
+                        tokenized.update({'labels': tokenized.input_ids})
 
-        tokenized = self.tok(jdata, padding='max_length',
-                        truncation=True,
-                        max_length=self.block_size,
-                        return_tensors='pt',
-                        add_special_tokens=False)
-
-        #Add labels for autoencoder!
-        tokenized.update({'labels': tokenized.input_ids})
-
-        return tokenized
+                        return tokenized
 
 
 class BalancedDataset(Dataset):
