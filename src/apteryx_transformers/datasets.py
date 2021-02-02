@@ -216,13 +216,15 @@ class PickleDatasetFromDisk(Dataset):
         return d
 
 
+
 class PickleDatasetByClass(Dataset):
-    def __init__(self, index_path, data_dir, tokenizer, block_size, per_class_limit):
+    def __init__(self, index_path, data_dir, tokenizer, block_size, per_class_limit, is_autoencoder=False):
         assert 'by_class' in str(index_path), 'Not using a _by_class dataset!'
         self.block_size = block_size
         self.tokenizer = tokenizer
         self.index_path = index_path
         self.data_dir = data_dir
+        self.is_autoencoder = is_autoencoder
         print('Loading index...')
         with open(self.index_path, 'rb') as f:
             self.class_to_patent_map = pickle.load(f)
@@ -237,6 +239,7 @@ class PickleDatasetByClass(Dataset):
 
             self.class_to_patent_map[_class] = np.random.choice(self.class_to_patent_map[_class],
                                                                 size=self.per_class_limit, replace=False)
+
 
     def __len__(self):
         return self.num_classes * self.per_class_limit
@@ -259,7 +262,7 @@ class PickleDatasetByClass(Dataset):
                            return_tensors='pt',
                            add_special_tokens=False)
 
-        d['labels'] = label
+        d['labels'] = d.input_ids if self.is_autoencoder else label
 
         return d
 
