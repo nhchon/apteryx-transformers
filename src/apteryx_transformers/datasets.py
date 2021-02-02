@@ -37,22 +37,23 @@ class AutoEncoder_JSONL_Dataset(Dataset):
         for file_n, file in enumerate(files):
             print(f'File {file_n}: {file}')
             print(f'{acc} processed so far.')
-            with open(file, 'r') as f:
-                for line in tqdm(f.readlines()):
-                    while acc < self.DS_LIMIT:
-                        l = extract_op(json.loads(line))
+            while acc < self.DS_LIMIT:
+                with open(file, 'r') as f:
+                    for line in tqdm(f.readlines()):
 
-                        enc = self.tok(l, return_tensors='pt')
-                        ids = enc.input_ids
+                            l = extract_op(json.loads(line))
 
-                        i_len = ids.shape[-1]
-                        n_blocks = (i_len // self.BLOCK_SIZE)
-                        trunc_len = n_blocks * self.BLOCK_SIZE
+                            enc = self.tok(l, return_tensors='pt')
+                            ids = enc.input_ids
 
-                        # Chunked ids
-                        jdata.extend(self.tok.batch_decode((ids[:, :trunc_len].view(n_blocks, self.BLOCK_SIZE))))
+                            i_len = ids.shape[-1]
+                            n_blocks = (i_len // self.BLOCK_SIZE)
+                            trunc_len = n_blocks * self.BLOCK_SIZE
 
-                        acc += n_blocks
+                            # Chunked ids
+                            jdata.extend(self.tok.batch_decode((ids[:, :trunc_len].view(n_blocks, self.BLOCK_SIZE))))
+
+                            acc += n_blocks
 
         tokenized = self.tok(jdata, padding='max_length',
                         truncation=True,
