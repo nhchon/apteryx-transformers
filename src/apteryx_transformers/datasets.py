@@ -10,54 +10,60 @@ import dill as pickle
 import json
 
 
-class NLDJSON_DIR_Dataset(Dataset):
-    def __init__(self, data_dir, extract_op, tokenizer, block_size: int, limit=None, glob_pattern='*',
-                 tok_labels=False):
+class AutoEncoder_JSONL_Dataset(Dataset):
+    def __init__(self, data_dir, extract_op, tokenizer, block_size: int, limit=None, glob_pattern='*'):
         self.block_size = block_size
         self.tok = tokenizer
-        self.tok_labels = tok_labels
-        files = Path(data_dir).glob(glob_pattern)
+        self.DS_LIMIT = limit
+        self.BLOCK_SIZE = block_size
         print('Ingesting data!')
-        self.txt, self.labels = self.get_data(files, extract_op, limit)
+        self.data = self.get_data(data_dir, extract_op, limit)
 
     def __len__(self):
-        return len(self.txt)
+        return self.data.labels.shape[0]
 
     def __getitem__(self, item):
-        d = self.tokenize(self.txt[item])
-        if self.tok_labels:
-            d['labels'] = self.tokenize(self.labels[item])['input_ids']
-        else:
-            d['labels'] = self.labels[item]
-        return d
+        return {
+            'input_ids': self.data.input_ids[item],
+            'attention_mask': self.data.attention_mask[item],
+            'labels': self.data.labels[item]
+        }
 
-    def tokenize(self, txt):
-        return self.tok(txt,
-                        padding='max_length',
+    def get_data(self, data_dir, extract_op, limit):
+        files = Path(data_dir).glob('*')
+
+        jdata = []
+        acc = 0
+        for file_n, file in enumerate(files):
+            print(f'File {file_n}: {file}')
+            print(f'{acc} processed so far.')
+            with open(file, 'r') as f:
+                for line in tqdm(f.readlines()):
+                    while acc < self.DS_LIMIT:
+                        l = extract_op(json.loads(line))
+
+                        enc = self.tok(l, return_tensors='pt')
+                        ids = enc.input_ids
+
+                        i_len = ids.shape[-1]
+                        n_blocks = (i_len // self.BLOCK_SIZE)
+                        trunc_len = n_blocks * self.BLOCK_SIZE
+
+                        # Chunked ids
+                        jdata.extend(self.tok.batch_decode((ids[:, :trunc_len].view(n_blocks, self.BLOCK_SIZE))))
+
+                        acc += n_blocks
+
+        tokenized = self.tok(jdata, padding='max_length',
                         truncation=True,
                         max_length=self.block_size,
                         return_tensors='pt',
                         add_special_tokens=False)
 
-    def get_data(self, files, extract_op, limit):
-        '''
-        Extracts relevant data from a list of files
-        :param files: a list of nldjs files
-        :param extract_op: a function or lambda expression to extract (x,y) data (a tuple) from a json example.
-        :param limit: the number of examples to extract.
-        :return: (x,y) lists of data.
-        '''
-        acc = 0
-        jdata = []
-        for f in files:
-            print(f'{acc} examples loaded so far.')
-            with open(f, 'r') as fbuf:
-                for l in tqdm(fbuf.readlines()):
-                    if acc < limit:
-                        jdata.append(extract_op(json.loads(l)))
-                        acc += 1
-                    else:
-                        return zip(*jdata)
+        #Add labels for autoencoder!
+        tokenized.update({'labels': tokenized.input_ids})
+
+        return tokenized
 
 
 class BalancedDataset(Dataset):

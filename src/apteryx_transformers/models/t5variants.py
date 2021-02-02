@@ -165,15 +165,16 @@ class T5EncoderAggDecoder(T5ForConditionalGeneration):
         result = {'output_formatted_for_decoder': None,
                   'dense_vector_encoding': None}
 
+        # Copy mask along d_model axis (the third one)
+        masks_expanded = attention_masks[:, :, None].repeat(1, 1, d_model)
+
+        # elementwise multiplication of enc last hidden state with mask,
+        # which should remove irrelevant states (those which were masked) from the average.
+        hidden_masked = encoder_last_hidden_states.mul(masks_expanded)
+
         if self.agg_mode == 'mean':
-            # Copy mask along d_model axis (the third one)
-            masks_expanded = attention_masks[:, :, None].repeat(1, 1, d_model)
-
-            # elementwise multiplication of enc last hidden state with mask,
-            # which should remove irrelevant states (those which were masked) from the average.
-            hidden_masked_summed = encoder_last_hidden_states.mul(masks_expanded).sum(1)
-
             # Average, dividing by total unmasked tokens (time axis, e.g. the second)
+            hidden_masked_summed = hidden_masked.sum(1)
             masked_time_agg = hidden_masked_summed.div(masks_expanded.sum(1))
 
             masked_time_agg_broadcast = masked_time_agg[:, None, :].repeat(1, seq_len, 1)
@@ -189,7 +190,7 @@ class T5EncoderAggDecoder(T5ForConditionalGeneration):
 
         elif self.agg_mode == 'linear':
             # Stack each sequence embedding and project to an encoding vector
-            stacked = encoder_last_hidden_states.view(batch_size, seq_len * d_model)
+            stacked = hidden_masked.view(batch_size, seq_len * d_model)
             dense_vector_encoding = self.enc_to_vec(stacked)  # (batch_size, self.encoding_vector_size)
             result['dense_vector_encoding'] = dense_vector_encoding
             encoder_output_hat = self.vec_to_enc_hat(dense_vector_encoding).view(batch_size, seq_len,
