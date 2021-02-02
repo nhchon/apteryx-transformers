@@ -19,7 +19,8 @@ from .t5variants import T5EncoderAggDecoder
 
 
 class AbstractTransformerAutoencoder(ABC):
-    def __init__(self, dataset, tokenizer, model_name: str, model_config_dict: dict, training_args_dict: dict, block_size: int,
+    def __init__(self, dataset, model_name: str, model_config_dict: dict, training_args_dict: dict, block_size: int,
+                 tokenizer=None,
                  encoding_vector_size=512,
                  agg=True,
                  agg_mode='linear',
@@ -178,6 +179,7 @@ class AbstractTransformerAutoencoder(ABC):
 class T5AutoEncoder(AbstractTransformerAutoencoder):
     def __init__(self, dataset, model_name='t5-base', block_size=1024,
                  encoding_vector_size=512,
+                 tokenizer=None,
                  agg=True,
                  agg_mode='linear',
                  model_config_dict=None,
@@ -186,6 +188,7 @@ class T5AutoEncoder(AbstractTransformerAutoencoder):
         super().__init__(dataset, model_name, model_config_dict,
                          training_args_dict, block_size,
                          encoding_vector_size=encoding_vector_size,
+                         tokenizer=tokenizer,
                          agg=agg,
                          agg_mode=agg_mode,
                          train_pct=train_pct,
