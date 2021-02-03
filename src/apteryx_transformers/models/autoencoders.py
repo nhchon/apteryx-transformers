@@ -45,6 +45,7 @@ class AbstractTransformerAutoencoder(ABC):
         self.config = self.get_config_class()(**model_config_dict) if model_config_dict else self.get_config_class()()
         self.config.decoder_start_token_id = self.tokenizer.pad_token_id
 
+
         # print(type(self.config))
         print(self.config)
 

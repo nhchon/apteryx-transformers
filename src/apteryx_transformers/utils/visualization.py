@@ -23,6 +23,28 @@ class Visualizer:
         self.collator = DataCollatorForDocumentClassificationBATCH()
         self.class_map = class_map
 
+    def parse_relative_location_from_response(self, i, txt, offset):
+        tok_probs = list(zip(i['tokens'], i['grad']))
+
+        tmp = txt
+        acc = 0
+        start_end = []
+        for tok, prob in tok_probs:
+            tok = tok.replace("Ġ", "")
+            tok = tok.replace("Ċ", "")
+            start = tmp.index(tok)
+            actual_start = acc + start
+            end = start + len(tok)
+            actual_end = acc + end
+            tmp = tmp[end:]
+
+            # print(tok, txt[actual_start:actual_end], start, end)
+            start_end.append([tok, txt[actual_start:actual_end], prob, actual_start + offset, actual_end + offset])
+
+            acc += end
+
+        return start_end
+
     def visualize(self, txt, threshold=.7):
         '''
         :param txt: Document text. A string.
@@ -49,10 +71,14 @@ class Visualizer:
                                      show_progress=True,
                                      encoder="bert")
         instances = smooth_grad.saliency_interpret(trainer.get_train_dataloader())
+
+        start_end_data = [parse_relative_location_from_response(instance, chunked_data[idx], offset=sum([len(chunked_data[i]) for i in range(idx-1)])) \
+                          for idx, instance in enumerate(instances)]
+
         results = list()
         for i in instances:
             if i['prob'] > threshold:
                 colored_string = smooth_grad.colorize(i, self.class_map)
                 results.append(colored_string)
                 # TODO 34: do something with this
-        return results, instances
+        return results, instances, start_end_data
