@@ -75,8 +75,12 @@ class Visualizer:
         start_end_data = []
         chunk_len_acc = 0
         for idx, instance in enumerate(instances):
-            chunk = chunked_data[idx][0]
-            start_end_data.append(self.parse_relative_location_from_response(instance, chunk, offset=chunk_len_acc))
+            try:
+                chunk = chunked_data[idx][0]
+                loc_data = self.parse_relative_location_from_response(instance, chunk, offset=chunk_len_acc)
+                start_end_data.append(loc_data)
+            except:
+                pass
             chunk_len_acc += len(chunk)
 
         results = list()
