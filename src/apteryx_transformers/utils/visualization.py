@@ -72,8 +72,12 @@ class Visualizer:
                                      encoder="bert")
         instances = smooth_grad.saliency_interpret(trainer.get_train_dataloader())
 
-        start_end_data = [parse_relative_location_from_response(instance, chunked_data[idx], offset=sum([len(chunked_data[i]) for i in range(idx-1)])) \
-                          for idx, instance in enumerate(instances)]
+        start_end_data = []
+        chunk_len_acc = 0
+        for idx, instance in enumerate(instances):
+            chunk = chunked_data[idx][0]
+            start_end_data.append(self.parse_relative_location_from_response(instance, chunk, offset=chunk_len_acc))
+            chunk_len_acc += len(chunk)
 
         results = list()
         for i in instances:
