@@ -80,7 +80,7 @@ class Visualizer:
                 loc_data = self.parse_relative_location_from_response(instance, chunk, offset=chunk_len_acc)
                 start_end_data.append(loc_data)
             except:
-                pass
+                continue
             chunk_len_acc += len(chunk)
 
         results = list()
