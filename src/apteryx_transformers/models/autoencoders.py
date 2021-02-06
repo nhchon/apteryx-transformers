@@ -156,9 +156,12 @@ class AbstractTransformerAutoencoder(ABC):
 
         return trainer
 
-    def train(self):
+    def train(self, checkpoint_dir = None):
         trainer = self.get_trainer()
-        trainer.train()
+        if checkpoint_dir:
+            trainer.train(checkpoint_dir)
+        else:
+            trainer.train()
 
     @abstractmethod
     def get_config_class(self):
