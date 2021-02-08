@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Union
+import os
 
 import torch
 from torch.utils import data
@@ -19,7 +20,12 @@ from .t5variants import T5EncoderAggDecoder
 
 
 class AbstractTransformerAutoencoder(ABC):
-    def __init__(self, dataset, model_name: str, model_config_dict: dict, training_args_dict: dict, block_size: int,
+    def __init__(self,
+                 dataset,
+                 model_name: str,
+                 model_config_dict: dict,
+                 training_args_dict: dict,
+                 block_size: int,
                  tokenizer=None,
                  encoding_vector_size=512,
                  agg=True,
@@ -36,23 +42,37 @@ class AbstractTransformerAutoencoder(ABC):
         :param n_layers_to_train: The number of attention layers to train. If a tuple, specifies for encoder and decoder separately.
         '''
         self.model_name = model_name
+        self.model_name_is_path = os.path.exists(self.model_name)
+        if self.model_name_is_path:
+            print(f'Loading model checkpoint from {self.model_name}')
+
         self.tokenizer = tokenizer if tokenizer else self.get_tokenizer_class().from_pretrained(self.model_name)
         self.collator = self.get_collator_class()()
+
         self.dataset = dataset
         self.block_size = self.dataset.block_size
         self.n_layers_to_train = n_layers_to_train
 
-        self.config = self.get_config_class()(**model_config_dict) if model_config_dict else self.get_config_class()()
-        self.config.decoder_start_token_id = self.tokenizer.pad_token_id
+        if self.model_name_is_path:
+            self.model = self.get_model_class().from_pretrained(self.model_name,
+                                                                block_size=self.block_size,
+                                                                encoding_vector_size=encoding_vector_size,
+                                                                agg=agg,
+                                                                agg_mode=agg_mode
+                                                                )
+            self.config = self.model.config
+        else:
+            self.config = self.get_config_class()(
+                **model_config_dict) if model_config_dict else self.get_config_class()()
+            self.config.decoder_start_token_id = self.tokenizer.pad_token_id
 
+            # print(type(self.config))
+            print(self.config)
 
-        # print(type(self.config))
-        print(self.config)
-
-        self.model = self.get_model_class()(config=self.config, block_size=self.block_size,
-                                            encoding_vector_size=encoding_vector_size,
-                                            agg=agg,
-                                            agg_mode=agg_mode)
+            self.model = self.get_model_class()(config=self.config, block_size=self.block_size,
+                                                encoding_vector_size=encoding_vector_size,
+                                                agg=agg,
+                                                agg_mode=agg_mode)
         self.encoder = self.model.encoder
         self.decoder = self.model.decoder
 
@@ -156,7 +176,7 @@ class AbstractTransformerAutoencoder(ABC):
 
         return trainer
 
-    def train(self, checkpoint_dir = None):
+    def train(self, checkpoint_dir=None):
         trainer = self.get_trainer()
         if checkpoint_dir:
             trainer.train(checkpoint_dir)
