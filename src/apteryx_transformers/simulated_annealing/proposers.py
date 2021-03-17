@@ -49,20 +49,34 @@ class Proposer:
         print(to_mask)
         left_char = s[start_idx - 1] if start_idx > 0 else ''
         right_char = s[end_idx] if end_idx < len(s) else ''
+
+        n_whitespace_remaining = sum([left_char in string.whitespace, right_char in string.whitespace])
+
         print(left_char, '|', right_char)
 
-        if (left_char in string.whitespace) and (right_char in string.whitespace):
+        if n_whitespace_remaining == 2:
             # Delete char to the right - it doesn't matter, both are whitespace
             return s[:start_idx] + s[end_idx + 1:]
 
-        elif left_char in string.whitespace:
-            #Right char is either punct or part of another word; remove in both directions
-            return s[:start_idx - 1] + s[end_idx:]
-        elif right_char in string.whitespace:
-            #Left char is likely punct; leave both
+        elif n_whitespace_remaining == 1:
+            # Don't delete anything
             return s[:start_idx] + s[end_idx:]
 
-        return s[:start_idx] + s[end_idx:]
+        elif n_whitespace_remaining == 0:
+            # Replace missing whitespace
+            return s[:start_idx] + ' ' + s[end_idx:]
+        else:
+            print('Should never reach here.')
+            return s[:start_idx] + s[end_idx:]
+
+        # elif left_char in string.whitespace:
+        #     #Right char is either punct or part of another word; remove in both directions
+        #     return s[:start_idx - 1] + s[end_idx:]
+        # elif right_char in string.whitespace:
+        #     #Left char is likely punct; leave both
+        #     return s[:start_idx] + s[end_idx:]
+
+
 
     def mask(self, s, mode='insert'):
         # encoded = self.tokenizer(s, return_tensors='pt')
