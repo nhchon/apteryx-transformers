@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Annealer:
-    def __init__(self, scorer, proposer, sequence):
+    def __init__(self, scorer, proposer):
         self.scorer = scorer
         self.proposer = proposer
 
