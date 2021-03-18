@@ -5,7 +5,6 @@ class Annealer:
     def __init__(self, scorer, proposer, sequence):
         self.scorer = scorer
         self.proposer = proposer
-        self.sequence = sequence
 
     def propose_until_accepted(self, y, T):
         its = 1
@@ -14,7 +13,7 @@ class Annealer:
             p_accept = min(1, (np.exp((self.scorer.score(candidate['output']) - self.scorer.score(y)) / T)))
             accepted = (np.random.uniform(0, 1) < p_accept)
             if accepted:
-                return (candidate['output'], its)
+                return candidate['output'], its
             its += 1
 
     def anneal(self,

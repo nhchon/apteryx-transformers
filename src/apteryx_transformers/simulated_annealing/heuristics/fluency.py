@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.nn.functional import softmax
-from tqdm import tqdm
+
 
 from transformers import GPT2LMHeadModel, GPT2Config, GPT2TokenizerFast
 import logging
@@ -30,7 +30,7 @@ class FluencyScorer:
         max_length = self.model.config.n_positions
 
         lls = []
-        for i in tqdm(range(0, encodings.input_ids.size(1), stride)):
+        for i in range(0, encodings.input_ids.size(1), stride):
             # Use a sliding window to calculate next-token log_likelihood.
             # Smaller windows are more accurate
             begin_loc = max(i + stride - max_length, 0)

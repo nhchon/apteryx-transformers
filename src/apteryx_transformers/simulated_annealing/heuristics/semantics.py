@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 from torch.nn.functional import softmax
-from tqdm import tqdm
 
 from transformers import GPT2LMHeadModel, GPT2Config, GPT2TokenizerFast
 from sentence_transformers import SentenceTransformer
