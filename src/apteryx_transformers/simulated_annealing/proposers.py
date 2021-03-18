@@ -29,7 +29,7 @@ class Proposer:
 
         # Set probs of original vocab tokens to zero
         if not allow_same:
-            masked_ids = self.tokenizer(original_word, add_special_tokens=False).to(self.device).input_ids
+            masked_ids = self.tokenizer(original_word, add_special_tokens=False).input_ids
             probs[:, mask_idx, masked_ids] = 0
 
         edit = torch.multinomial(probs[:, mask_idx], num_samples=1, replacement=True).item()
