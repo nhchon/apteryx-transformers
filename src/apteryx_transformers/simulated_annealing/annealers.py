@@ -1,5 +1,5 @@
 import numpy as np
-
+from tqdm import tqdm
 
 class Annealer:
     def __init__(self, scorer, proposer):
@@ -26,7 +26,7 @@ class Annealer:
         y_hist = [y]
         t_hist = [T_init]
         it_hist = [0]
-        for t in range(max_search):
+        for t in tqdm(range(max_search)):
             T = max(T_init - (C * t), eps)
             y, its = self.propose_until_accepted(y, T)
             y_hist.append(y)
