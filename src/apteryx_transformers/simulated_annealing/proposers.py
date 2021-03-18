@@ -8,13 +8,20 @@ from transformers import RobertaTokenizerFast, RobertaForMaskedLM
 
 
 class Proposer:
-    def __init__(self, tokenizer='roberta-base', model='roberta-base', spacy_model='en_core_web_sm', device='cpu'):
+    def __init__(self,
+                 tokenizer='roberta-base',
+                 model='roberta-base',
+                 spacy_model='en_core_web_sm',
+                 device='cpu',
+                 include_insert = True,
+                 include_delete = False):
         self.device = device
         self.logger = logging.Logger('Proposer')
         self.nlp = spacy.load(spacy_model)
         self.tokenizer = RobertaTokenizerFast.from_pretrained(tokenizer)
         self.model = RobertaForMaskedLM.from_pretrained(model).to(self.device)
-        self.ops = [('insert', self.insert), ('edit', self.edit), ('delete', self.delete)]
+        self.ops = [('edit', self.edit), ('insert', self.insert) if include_insert else None, ('delete', self.delete) if include_delete else None]
+        self.ops = [i for i in self.ops if i]
 
     def propose(self, s):
         opname, op = self.ops[np.random.randint(len(self.ops))]
