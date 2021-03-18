@@ -14,7 +14,7 @@ class SemanticScorer:
     def __init__(self, model_name='stsb-roberta-large', device='cpu'):
         logger = logging.Logger('Semantic Scorer')
 
-        self.model = SentenceTransformer('stsb-roberta-large').to(device)
+        self.model = SentenceTransformer(model_name).to(device)
 
     def __call__(self, sequence, target):
         return self.similarity(sequence, target)

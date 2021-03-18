@@ -47,6 +47,6 @@ class FluencyScorer:
 
             lls.append(log_likelihood)
         ppl = torch.exp(torch.stack(lls).sum() / end_loc)
-        return ppl
+        return ppl.item()
 
 

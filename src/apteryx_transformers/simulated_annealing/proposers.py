@@ -13,6 +13,12 @@ class Proposer:
         self.nlp = spacy.load(spacy_model)
         self.tokenizer = RobertaTokenizerFast.from_pretrained(tokenizer)
         self.model = RobertaForMaskedLM.from_pretrained(model)
+        self.ops = [('insert', self.insert), ('edit', self.edit), ('delete', self.delete)]
+
+    def propose(self, s):
+        opname, op = self.ops[np.random.randint(len(self.ops))]
+        return {'op': opname,
+                'output': op(s)}
 
     def edit(self, s, allow_same=False):
         masked, inputs, mask_idx, original_word = self.mask(s, mode='edit')
@@ -28,17 +34,17 @@ class Proposer:
         edit = torch.multinomial(probs[:, mask_idx], num_samples=1, replacement=True).item()
         new[:, mask_idx] = edit
 
-        return self.tokenizer.batch_decode(new, skip_special_tokens=True)[0], mask_idx
+        return self.tokenizer.batch_decode(new, skip_special_tokens=True)[0] #, mask_idx, original_word
 
     def insert(self, s):
-        masked, inputs, mask_idx, _ = self.mask(s, mode='insert')
+        masked, inputs, mask_idx, original_word = self.mask(s, mode='insert')
         new = inputs.input_ids.clone()
         out = self.model(**inputs)
 
         edit = torch.multinomial(out.logits.softmax(2)[:, mask_idx], num_samples=1, replacement=True).item()
         new[:, mask_idx] = edit
 
-        return self.tokenizer.batch_decode(new, skip_special_tokens=True)[0], mask_idx
+        return self.tokenizer.batch_decode(new, skip_special_tokens=True)[0] #, mask_idx, original_word
 
     def delete(self, s):
         '''
@@ -46,28 +52,27 @@ class Proposer:
         '''
         to_mask, start_idx, end_idx, pos, words = self.mask(s, mode='delete')
 
-        print(to_mask)
+
         left_char = s[start_idx - 1] if start_idx > 0 else ''
         right_char = s[end_idx] if end_idx < len(s) else ''
 
         n_whitespace_remaining = sum([left_char in string.whitespace, right_char in string.whitespace])
 
-        print(left_char, '|', right_char)
 
         if n_whitespace_remaining == 2:
             # Delete char to the right - it doesn't matter, both are whitespace
-            return s[:start_idx] + s[end_idx + 1:]
+            return s[:start_idx] + s[end_idx + 1:]#, to_mask
 
         elif n_whitespace_remaining == 1:
             # Don't delete anything
-            return s[:start_idx] + s[end_idx:]
+            return s[:start_idx] + s[end_idx:]#, to_mask
 
         elif n_whitespace_remaining == 0:
             # Replace missing whitespace
-            return s[:start_idx] + ' ' + s[end_idx:]
+            return s[:start_idx] + ' ' + s[end_idx:]#, to_mask
         else:
             print('Should never reach here.')
-            return s[:start_idx] + s[end_idx:]
+            return s[:start_idx] + s[end_idx:]#, to_mask
 
         # elif left_char in string.whitespace:
         #     #Right char is either punct or part of another word; remove in both directions
