@@ -3,21 +3,22 @@ from tqdm import tqdm
 
 
 class Annealer:
-    def __init__(self, scorer, proposer, hyperparams=dict()):
+    def __init__(self, scorer, proposer, score_hyperparameters=dict(), proposer_hyperparameters=dict()):
         # Score output is {'total': num, 'constituent_1': num, ...'constituent_N':num}
         self.scorer = scorer
 
         self.proposer = proposer
 
-        self.hyperparams = hyperparams
+        self.score_hyperparameters = score_hyperparameters
+        self.proposer_hyperparameters = proposer_hyperparameters
 
     def propose_until_accepted(self, y, T):
         its = 1
         while True:
-            proposal = self.proposer.propose(y)
+            proposal = self.proposer.propose(y, **self.proposer_hyperparameters)
             candidate_seq = proposal['output']
-            candidate_score = self.scorer.score(candidate_seq, **self.hyperparams)
-            y_score = self.scorer.score(y, **self.hyperparams)
+            candidate_score = self.scorer.score(candidate_seq, **self.score_hyperparameters)
+            y_score = self.scorer.score(y, **self.score_hyperparameters)
             p_accept = min(1, (np.exp((candidate_score['total'] - y_score['total']) / T)))
             accepted = (np.random.uniform(0, 1) < p_accept)
             if accepted:
