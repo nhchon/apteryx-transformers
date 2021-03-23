@@ -7,21 +7,24 @@ import string
 from transformers import RobertaTokenizerFast, RobertaForMaskedLM
 
 
-class Proposer:
+class WordLevelProposer:
     def __init__(self,
                  tokenizer='roberta-base',
                  model='roberta-base',
                  spacy_model='en_core_web_sm',
                  device='cpu',
-                 include_insert = True,
-                 include_delete = False):
+                 include_insert=True,
+                 include_delete=False,
+                 n_masks=1):
         self.device = device
         self.logger = logging.Logger('Proposer')
         self.nlp = spacy.load(spacy_model)
         self.tokenizer = RobertaTokenizerFast.from_pretrained(tokenizer)
         self.model = RobertaForMaskedLM.from_pretrained(model).to(self.device)
-        self.ops = [('edit', self.edit), ('insert', self.insert) if include_insert else None, ('delete', self.delete) if include_delete else None]
+        self.ops = [('edit', self.edit), ('insert', self.insert) if include_insert else None,
+                    ('delete', self.delete) if include_delete else None]
         self.ops = [i for i in self.ops if i]
+        self.n_masks = n_masks
 
     def propose(self, s):
         opname, op = self.ops[np.random.randint(len(self.ops))]
@@ -125,3 +128,78 @@ class Proposer:
         mask_idx = (inputs.input_ids[0] == self.tokenizer.mask_token_id).nonzero().item()
 
         return masked, inputs, mask_idx, to_mask
+
+
+class TokenLevelProposer:
+    def __init__(self,
+                 tokenizer='roberta-base',
+                 model='roberta-base',
+                 device='cpu',
+                 include_insert=True,
+                 include_delete=False):
+        self.device = device
+        self.logger = logging.Logger('Proposer')
+        self.tokenizer = RobertaTokenizerFast.from_pretrained(tokenizer)
+        self.model = RobertaForMaskedLM.from_pretrained(model).to(self.device)
+        self.ops = ['edit',
+                    'insert' if include_insert else None,
+                    'delete' if include_delete else None]
+        self.ops = [i for i in self.ops if i]
+
+    def propose(self, s, n_masks=5):
+        opname = self.ops[np.random.randint(len(self.ops))]
+        return {'op': opname,
+                'output': self._propose(s, mode=opname, n_masks=n_masks)}
+
+    def _propose(self, s, mode='edit', n_masks=5):
+        inputs, chosen_idxs = self.mask(s, mode=mode, n_masks=n_masks)
+        assert inputs['input_ids'].shape[0] == 1, 'Did you accidentally pass in two strings?'
+
+        if mode == 'delete':
+            return self.tokenizer.batch_decode(inputs['input_ids'], skip_special_tokens=True)[0]
+        else:
+            out = self.model(**inputs)
+            new = inputs['input_ids'].clone()
+
+            probs = out.logits.softmax(2)
+            mask_idxs = torch.nonzero(new == self.tokenizer.mask_token_id)[:, 1]
+
+            edits = torch.multinomial(probs[0][mask_idxs], num_samples=1, replacement=True)
+
+            new[0][mask_idxs] = edits.flatten()
+            return self.tokenizer.batch_decode(new, skip_special_tokens=True)[0]
+
+    def insert_mask_at(self, t1, idx):
+        return torch.cat([t1[:, :idx], torch.Tensor([[self.tokenizer.mask_token_id]]), t1[:, idx:]], dim=1).long()
+
+    def pop_at(self, t1, idxs_to_pop):
+        all_idxs = np.arange(t1.shape[-1])
+        return t1[:, [i.item() for i in all_idxs if i not in idxs_to_pop]]
+
+    def mask(self, s, mode='insert', n_masks=5):
+        encoded = self.tokenizer(s, return_tensors='pt')
+        original = encoded.input_ids
+        input_ids = original.clone()
+
+        # Choose tokens from 1 to end - 1 (avoid padding)
+        chosen_idxs = np.sort(np.random.choice(np.arange(1, input_ids.shape[1] - 1), n_masks, replace=False))
+
+        # Randomly set a token to MASK
+        if mode == 'edit':
+            input_ids[:, chosen_idxs] = self.tokenizer.mask_token_id
+
+        elif mode == 'insert':
+            # Work backwards (see [::-1] at end) so insertion doesn't cause offsets
+            chosen_idxs = chosen_idxs[::-1]
+            for idx in chosen_idxs:
+                input_ids = self.insert_mask_at(input_ids, idx)
+
+        elif mode == 'delete':
+            input_ids = self.pop_at(input_ids, chosen_idxs)
+
+        to_return = {
+            'input_ids': input_ids,
+            'attention_mask': torch.ones(input_ids.shape)
+        }
+
+        return to_return, chosen_idxs
