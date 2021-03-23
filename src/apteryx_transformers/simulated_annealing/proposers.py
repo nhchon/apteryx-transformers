@@ -177,7 +177,7 @@ class TokenLevelProposer:
         return t1[:, [i.item() for i in all_idxs if i not in idxs_to_pop]]
 
     def mask(self, s, mode='insert', n_masks=5):
-        encoded = self.tokenizer(s, return_tensors='pt')
+        encoded = self.tokenizer(s, return_tensors='pt').to(device=self.device)
         original = encoded.input_ids
         input_ids = original.clone()
 
