@@ -177,7 +177,7 @@ class TokenLevelProposer:
         return t1[:, [i.item() for i in all_idxs if i not in idxs_to_pop]]
 
     def mask(self, s, mode='insert', n_masks=5):
-        encoded = self.tokenizer(s, return_tensors='pt').to(device=self.device)
+        encoded = self.tokenizer(s, return_tensors='pt')
         original = encoded.input_ids
         input_ids = original.clone()
 
@@ -198,8 +198,8 @@ class TokenLevelProposer:
             input_ids = self.pop_at(input_ids, chosen_idxs)
 
         to_return = {
-            'input_ids': input_ids,
-            'attention_mask': torch.ones(input_ids.shape)
+            'input_ids': input_ids.to(device=self.device),
+            'attention_mask': torch.ones(input_ids.shape).to(device=self.device)
         }
 
         return to_return, chosen_idxs
