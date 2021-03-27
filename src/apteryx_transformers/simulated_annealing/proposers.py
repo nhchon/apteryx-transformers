@@ -183,7 +183,7 @@ class TokenLevelProposer:
 
         # Choose tokens from 1 to end - 1 (avoid padding)
         # Make sure you don't try to sample too many tokens!
-        n_to_chose = min(n_masks, input_ids.shape(-1))
+        n_to_chose = min(n_masks, input_ids.shape[-1])
         chosen_idxs = np.sort(np.random.choice(np.arange(1, input_ids.shape[1] - 1), n_to_chose, replace=False))
 
         # Randomly set a token to MASK
