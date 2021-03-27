@@ -176,15 +176,17 @@ class TokenLevelProposer:
         all_idxs = np.arange(t1.shape[-1])
         return t1[:, [i.item() for i in all_idxs if i not in idxs_to_pop]]
 
-    def mask(self, s, mode='insert', n_masks=5):
+    def mask(self, s, mode='insert', n_masks=5, max_sample_factor = .5):
         encoded = self.tokenizer(s, return_tensors='pt')
         original = encoded.input_ids
         input_ids = original.clone()
 
         # Choose tokens from 1 to end - 1 (avoid padding)
         # Make sure you don't try to sample too many tokens!
-        print((n_masks, input_ids.shape[-1]))
-        n_to_chose = min(n_masks, input_ids.shape[-1])
+        # Never sample more than 1/2 of all the tokens in the inputs. This could be a hyp.
+        print((n_masks, int(input_ids.shape[-1] * max_sample_factor)))
+
+        n_to_chose = min(n_masks, int(input_ids.shape[-1] * max_sample_factor))
         print(n_to_chose)
         chosen_idxs = np.sort(np.random.choice(np.arange(1, input_ids.shape[1] - 1), n_to_chose, replace=False))
 
