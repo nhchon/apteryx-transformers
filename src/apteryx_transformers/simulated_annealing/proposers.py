@@ -185,6 +185,7 @@ class TokenLevelProposer:
         # Make sure you don't try to sample too many tokens!
         print((n_masks, input_ids.shape[-1]))
         n_to_chose = min(n_masks, input_ids.shape[-1])
+        print(n_to_chose)
         chosen_idxs = np.sort(np.random.choice(np.arange(1, input_ids.shape[1] - 1), n_to_chose, replace=False))
 
         # Randomly set a token to MASK
