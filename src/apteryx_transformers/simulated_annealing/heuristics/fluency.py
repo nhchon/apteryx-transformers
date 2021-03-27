@@ -7,7 +7,6 @@ from transformers import GPT2LMHeadModel, GPT2Config, GPT2TokenizerFast
 import logging
 
 
-
 class FluencyScorer:
     def __init__(self, tok_dir=None, model_dir=None, base_type='gpt2', device='cpu'):
         logger = logging.Logger('Fluency Scorer')
