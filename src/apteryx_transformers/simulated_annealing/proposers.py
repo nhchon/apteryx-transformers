@@ -182,20 +182,31 @@ class TokenLevelProposer:
         input_ids = original.clone()
 
         # Choose tokens from 1 to end - 1 (avoid padding)
-        chosen_idxs = np.sort(np.random.choice(np.arange(1, input_ids.shape[1] - 1), n_masks, replace=False))
+        # Make sure you don't try to sample too many tokens!
+        n_to_chose = min(n_masks, input_ids.shape(-1))
+        chosen_idxs = np.sort(np.random.choice(np.arange(1, input_ids.shape[1] - 1), n_to_chose, replace=False))
 
         # Randomly set a token to MASK
         if mode == 'edit':
-            input_ids[:, chosen_idxs] = self.tokenizer.mask_token_id
+            try:
+                input_ids[:, chosen_idxs] = self.tokenizer.mask_token_id
+            except:
+                print('Failed EDIT op.')
 
         elif mode == 'insert':
-            # Work backwards (see [::-1] at end) so insertion doesn't cause offsets
-            chosen_idxs = chosen_idxs[::-1]
-            for idx in chosen_idxs:
-                input_ids = self.insert_mask_at(input_ids, idx)
+            try:
+                # Work backwards (see [::-1] at end) so insertion doesn't cause offsets
+                chosen_idxs = chosen_idxs[::-1]
+                for idx in chosen_idxs:
+                    input_ids = self.insert_mask_at(input_ids, idx)
+            except:
+                print('Failed INSERT op.')
 
         elif mode == 'delete':
-            input_ids = self.pop_at(input_ids, chosen_idxs)
+            try:
+                input_ids = self.pop_at(input_ids, chosen_idxs)
+            except:
+                print('Failed DELETE op.')
 
         to_return = {
             'input_ids': input_ids.to(device=self.device),
