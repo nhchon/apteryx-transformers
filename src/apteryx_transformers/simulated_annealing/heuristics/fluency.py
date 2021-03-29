@@ -48,6 +48,8 @@ class FluencyScorer:
         try:
             ppl = torch.exp(torch.stack(lls).sum() / end_loc)
         except:
+            print(s)
+            print(encodings)
             print(lls)
             assert False
         return ppl.item()
