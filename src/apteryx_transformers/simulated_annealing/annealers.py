@@ -1,5 +1,6 @@
 import numpy as np
 from tqdm import tqdm
+import time
 
 
 class Annealer:
@@ -32,17 +33,21 @@ class Annealer:
                C=.1,
                eps=1 / 1e10,
                log=False,
-               log_fn=lambda x: print(x)):
+               log_fn=lambda x: print(x),
+               time_limit:float = 60):
         y = y_init
         y_hist = [y]
         t_hist = [T_init]
         it_hist = [0]
         candidate_score_hist = []
         y_score_hist = []
+
+        start_time = time.time()
         for t in tqdm(range(max_search)):
             if log: log_fn(y)
-            if y == '':
-                # Break early if converged to empty string.
+            current_time = time.time() - start_time
+            if (y == '') or current_time > time_limit:
+                # Break early if converged to empty string or overrun time limit.
                 break
             T = max(T_init - (C * t), eps)
             y, its, candidate_score, y_score = self.propose_until_accepted(y, T)
