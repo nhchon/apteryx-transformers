@@ -187,6 +187,7 @@ class TokenLevelProposer:
         #print((n_masks, int(input_ids.shape[-1] * max_sample_factor)))
 
         n_to_chose = min(n_masks, int(input_ids.shape[-1] * max_sample_factor))
+        print(n_masks, max_sample_factor)
         #print(n_to_chose)
         chosen_idxs = np.sort(np.random.choice(np.arange(1, input_ids.shape[1] - 1), n_to_chose, replace=False))
 
