@@ -47,6 +47,9 @@ class Annealer:
             if log: log_fn(y)
             current_time = time.time() - start_time
             if (y == '') or current_time > time_limit:
+                print(f'''Breaking Early.
+                    compute time: {current_time}
+                    y: {y}''')
                 # Break early if converged to empty string or overrun time limit.
                 break
             T = max(T_init - (C * t), eps)
