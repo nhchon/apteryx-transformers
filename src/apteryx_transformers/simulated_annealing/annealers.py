@@ -38,6 +38,7 @@ class Annealer:
         candidate_score_hist = []
         y_score_hist = []
         for t in tqdm(range(max_search)):
+            print(y)
             T = max(T_init - (C * t), eps)
             y, its, candidate_score, y_score = self.propose_until_accepted(y, T)
             y_hist.append(y)
