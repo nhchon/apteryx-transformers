@@ -45,13 +45,14 @@ class FluencyScorer:
                 log_likelihood = outputs[0] * trg_len
 
             lls.append(log_likelihood)
-        try:
+        if lls:
             ppl = torch.exp(torch.stack(lls).sum() / end_loc)
-        except:
-            print(s)
-            print(encodings)
-            print(lls)
-            assert False
-        return ppl.item()
+            return ppl.item()
+        else:
+            # Perplexity cannot be calculated on the empty string.
+            # Set to infinity to strongly disincentivise.
+            return np.inf
+
+
 
 

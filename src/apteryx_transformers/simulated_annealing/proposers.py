@@ -162,12 +162,19 @@ class TokenLevelProposer:
             new = inputs['input_ids'].clone()
 
             probs = out.logits.softmax(2)
-            mask_idxs = torch.nonzero(new == self.tokenizer.mask_token_id)[:, 1]
+            mask_idxs = torch.nonzero(new == self.tokenizer.mask_token_id)
 
-            edits = torch.multinomial(probs[0][mask_idxs], num_samples=1, replacement=True)
+            #If there exist mask indexes:
+            if mask_idxs.sum().item() != 0:
+                mask_idxs = mask_idxs[:, 1]
 
-            new[0][mask_idxs] = edits.flatten()
-            return self.tokenizer.batch_decode(new, skip_special_tokens=True)[0]
+                edits = torch.multinomial(probs[0][mask_idxs], num_samples=1, replacement=True)
+
+                new[0][mask_idxs] = edits.flatten()
+                return self.tokenizer.batch_decode(new, skip_special_tokens=True)[0]
+            else:
+                #Nothing was masked, so simply return s.
+                return s
 
     def insert_mask_at(self, t1, idx):
         return torch.cat([t1[:, :idx], torch.Tensor([[self.tokenizer.mask_token_id]]), t1[:, idx:]], dim=1).long()
