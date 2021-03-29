@@ -30,7 +30,8 @@ class Annealer:
                max_search=1000,
                T_init=10,
                C=.1,
-               eps=1 / 1e10):
+               eps=1 / 1e10,
+               log=False):
         y = y_init
         y_hist = [y]
         t_hist = [T_init]
@@ -38,7 +39,7 @@ class Annealer:
         candidate_score_hist = []
         y_score_hist = []
         for t in tqdm(range(max_search)):
-            print(y)
+            if log: print(y)
             T = max(T_init - (C * t), eps)
             y, its, candidate_score, y_score = self.propose_until_accepted(y, T)
             y_hist.append(y)
