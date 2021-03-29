@@ -40,6 +40,9 @@ class Annealer:
         y_score_hist = []
         for t in tqdm(range(max_search)):
             if log: print(y)
+            if y == '':
+                # Break early if converged to empty string.
+                break
             T = max(T_init - (C * t), eps)
             y, its, candidate_score, y_score = self.propose_until_accepted(y, T)
             y_hist.append(y)
