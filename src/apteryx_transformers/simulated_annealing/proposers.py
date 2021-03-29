@@ -198,7 +198,7 @@ class TokenLevelProposer:
         #print(n_to_chose)
 
         options = np.arange(1, input_ids.shape[1] - 1)
-        chosen_idxs = np.sort(np.random.choice(options, n_to_chose, replace=False)) if len(options) >= n_to_chose else np.array([0])
+        chosen_idxs = np.sort(np.random.choice(options, n_to_chose, replace=False)) if len(options.ravel()) >= n_to_chose else np.array([0])
 
 
         # Randomly set a token to MASK
