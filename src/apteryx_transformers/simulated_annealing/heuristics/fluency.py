@@ -45,7 +45,11 @@ class FluencyScorer:
                 log_likelihood = outputs[0] * trg_len
 
             lls.append(log_likelihood)
-        ppl = torch.exp(torch.stack(lls).sum() / end_loc)
+        try:
+            ppl = torch.exp(torch.stack(lls).sum() / end_loc)
+        except:
+            print(lls)
+            assert False
         return ppl.item()
 
 
