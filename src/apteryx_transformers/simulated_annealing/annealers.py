@@ -31,7 +31,8 @@ class Annealer:
                T_init=10,
                C=.1,
                eps=1 / 1e10,
-               log=False):
+               log=False,
+               log_fn=lambda x: print(x)):
         y = y_init
         y_hist = [y]
         t_hist = [T_init]
@@ -39,7 +40,7 @@ class Annealer:
         candidate_score_hist = []
         y_score_hist = []
         for t in tqdm(range(max_search)):
-            if log: print(y)
+            if log: log_fn(y)
             if y == '':
                 # Break early if converged to empty string.
                 break
