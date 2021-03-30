@@ -22,3 +22,5 @@ TC_COUNT_MAP = {2800: 1043341, 3700: 584685, 2600: 525022, 3600: 504068, 1700: 4
 # pd.read_csv('tc_count').applymap(int).set_index('TC').to_dict()['tc_count']
 
 TC_TOTAL = 4049012 #sum(TC_COUNT_MAP.values())
+
+GPT3_KEY = 'sk-yM3CMLAJYwBBYwtCHGV43AVA8C5OZSMvAxjjkl4O'
