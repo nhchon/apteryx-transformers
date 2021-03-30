@@ -19,8 +19,18 @@ TC_COUNT_MAP = {2800: 1043341, 3700: 584685, 2600: 525022, 3600: 504068, 1700: 4
                 1500: 16, 1000: 13, 7800: 13, 7600: 12, 1300: 12, 5700: 11, 3000: 6, 7700: 4, 4200: 3, 5600: 3, 4700: 2,
                 4600: 2, 5100: 1, 5400: 1, 4500: 1, 9700: 1, 6500: 1, 500: 1, 6700: 1, 8600: 1, 4000: 1, 4800: 1,
                 8800: 1, 1400: 1, 400: 1, 7200: 1}
-# pd.read_csv('tc_count').applymap(int).set_index('TC').to_dict()['tc_count']
 
-TC_TOTAL = 4049012 #sum(TC_COUNT_MAP.values())
+
+TC_TOTAL = 4049012  # sum(TC_COUNT_MAP.values())
 
 GPT3_KEY = '***REMOVED***'
+
+BLOCKLIST = ['fig',
+             'fig.',
+             'figs',
+             'figs.',
+             'figure',
+             'example',
+             'examples',
+             'table',
+             'tables']
