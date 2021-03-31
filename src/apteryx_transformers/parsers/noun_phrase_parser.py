@@ -4,6 +4,8 @@ import spacy
 import string
 
 from apteryx_transformers.parsers.parser_utils import remove_tables, serialize_report, deserialize_nested
+from apteryx_transformers.GLOBALS import BLOCKLIST
+
 
 '''
 ^ : start at beginning of string
@@ -16,13 +18,11 @@ DEFAULT_CONFIG = {"window": 5, "remove_table_text": True, "severity": 0}
 
 
 class NPParser:
-    def __init__(self, spacy_model='en_core_web_lg', blocklist_path='blocklist.txt', config=DEFAULT_CONFIG):
+    def __init__(self, spacy_model='en_core_web_lg', add_to_blocklist:list = [], config=DEFAULT_CONFIG):
         print('Initializing!')
         print(f'Loading spacy model: {spacy_model}')
         self.nlp = spacy.load(spacy_model)
-        print(f'Loading blocklist: {blocklist_path}')
-        with open(blocklist_path, 'r') as f:
-            self.blocklist = set([i.strip().upper() for i in f.readlines()])
+        self.blocklist = BLOCKLIST + add_to_blocklist
         self.config = config
 
     def rm_stopwords(self, s):
