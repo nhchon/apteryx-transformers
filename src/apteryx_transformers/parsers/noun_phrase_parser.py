@@ -1,8 +1,9 @@
 import pandas as pd
 import regex as re
 import spacy
+import string
 
-from apteryx_transformers.parsers.parser_utils import remove_tables, serialize_report
+from apteryx_transformers.parsers.parser_utils import remove_tables, serialize_report, deserialize_nested
 
 '''
 ^ : start at beginning of string
@@ -30,7 +31,7 @@ class NPParser:
         return ''.join(no_stop)
 
     def clean_np(self, tokens):
-        return ''.join([t.text_with_ws.upper() for t in tokens if not t.is_stop])
+        return ''.join([t.text_with_ws.upper() for t in tokens if not any([t.is_stop, t.is_punct])])
 
     def set_config(self, new_config):
         self.config.update(new_config)
@@ -53,9 +54,16 @@ class NPParser:
         for chunk in doc.noun_chunks:
             tok_end = chunk.end
             next_text = ''.join([t.text_with_ws for t in doc[tok_end:tok_end + window]])
+
+            #Detect following number.
             num_match = re.match(NUM_PATTERN, next_text)
             if num_match:
-                num_match = num_match.group(1)
+                group = num_match.group(1)
+                #Iteratively remove punctuation from the match, if found.
+                while group[-1] in string.punctuation:
+                    group = group[:-1]
+                num_match = group
+
             data.append([chunk, num_match, next_text])
 
         df = pd.DataFrame.from_records(data)
