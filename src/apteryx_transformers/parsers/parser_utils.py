@@ -47,3 +47,23 @@ def serialize_report(d):
         else:
             new_d[k] = v.to_json(orient = 'records')
     return json.dumps(new_d)
+
+def is_json(s):
+    try:
+        _ = json.loads(s)
+        return True
+    except:
+        return False
+
+def deserialize_nested(s):
+    if isinstance(s, dict):
+        return {k:deserialize_nested(v) for k,v in s.items()}
+    elif isinstance(s, list):
+        return [deserialize_nested(i) for i in s]
+    elif isinstance(s, str):
+        if is_json(s):
+            return deserialize_nested(json.loads(s))
+        else:
+            return s
+    else:
+        return s
