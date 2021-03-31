@@ -20,7 +20,6 @@ TC_COUNT_MAP = {2800: 1043341, 3700: 584685, 2600: 525022, 3600: 504068, 1700: 4
                 4600: 2, 5100: 1, 5400: 1, 4500: 1, 9700: 1, 6500: 1, 500: 1, 6700: 1, 8600: 1, 4000: 1, 4800: 1,
                 8800: 1, 1400: 1, 400: 1, 7200: 1}
 
-
 TC_TOTAL = 4049012  # sum(TC_COUNT_MAP.values())
 
 GPT3_KEY = '***REMOVED***'
@@ -33,4 +32,29 @@ BLOCKLIST = ['fig',
              'example',
              'examples',
              'table',
-             'tables']
+             'tables'] + ['jan.',
+                          'feb.',
+                          'mar.',
+                          'apr.',
+                          'may.',
+                          'jun.',
+                          'jul.',
+                          'aug.',
+                          'sep.',
+                          'sept.',
+                          'oct.',
+                          'nov.',
+                          'dec.',
+                          'jan',
+                          'feb',
+                          'mar',
+                          'apr',
+                          'may',
+                          'jun',
+                          'jul',
+                          'aug',
+                          'sep',
+                          'sept',
+                          'oct',
+                          'nov',
+                          'dec']
