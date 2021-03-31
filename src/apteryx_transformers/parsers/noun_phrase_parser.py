@@ -23,15 +23,19 @@ class NPParser:
         print(f'Loading spacy model: {spacy_model}')
         self.nlp = spacy.load(spacy_model)
         self.blocklist = BLOCKLIST + add_to_blocklist
+        print(self.blocklist)
         self.config = config
 
-    def rm_stopwords(self, s):
-        doc = self.nlp(s)
-        no_stop = [t.text_with_ws for t in doc if not t.is_stop]
-        return ''.join(no_stop)
 
     def clean_np(self, tokens):
-        return ''.join([t.text_with_ws.upper() for t in tokens if not any([t.is_stop, t.is_punct])])
+        clean = [t.text_with_ws.upper() for t in tokens if not any([t.is_stop,
+                                                                    t.is_punct,
+                                                                    t.text_with_ws.lower() in self.blocklist])]
+        if clean:
+            #Join text and remove l/r whitespace, if any.
+            return ''.join(clean).strip()
+        else:
+            return None
 
     def set_config(self, new_config):
         self.config.update(new_config)
@@ -71,11 +75,13 @@ class NPParser:
 
         # Remove stopwords from np
         df['np_clean'] = df.np_raw.apply(self.clean_np)
+        #Drop nps that were completely eliminated by the earlier step.
+        df = df.dropna()
         # Convert raw nps to text
         df['np_raw'] = df.np_raw.apply(lambda tokens: ''.join([t.text_with_ws for t in tokens]))
 
         df['in_blocklist'] = df.np_clean.apply(
-            lambda noun_phrase: any([i.upper() in self.blocklist for i in re.split('\s', noun_phrase.strip())]))
+            lambda noun_phrase: any([i.lower() in self.blocklist for i in re.split('\s', noun_phrase.strip())]))
 
         return df[~df.in_blocklist].dropna().reset_index(drop=True)
 
