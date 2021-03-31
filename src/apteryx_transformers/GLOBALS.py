@@ -32,29 +32,42 @@ BLOCKLIST = ['fig',
              'example',
              'examples',
              'table',
-             'tables'] + ['jan.',
-                          'feb.',
-                          'mar.',
-                          'apr.',
-                          'may.',
-                          'jun.',
-                          'jul.',
-                          'aug.',
-                          'sep.',
-                          'sept.',
-                          'oct.',
-                          'nov.',
-                          'dec.',
-                          'jan',
-                          'feb',
-                          'mar',
-                          'apr',
-                          'may',
-                          'jun',
-                          'jul',
-                          'aug',
-                          'sep',
-                          'sept',
-                          'oct',
-                          'nov',
-                          'dec']
+             'tables',
+             'jan.',
+             'feb.',
+             'mar.',
+             'apr.',
+             'may.',
+             'jun.',
+             'jul.',
+             'aug.',
+             'sep.',
+             'sept.',
+             'oct.',
+             'nov.',
+             'dec.',
+             'jan',
+             'feb',
+             'mar',
+             'apr',
+             'may',
+             'jun',
+             'jul',
+             'aug',
+             'sep',
+             'sept',
+             'oct',
+             'nov',
+             'dec']
+
+IDEATION_PROMPT_TEMPLATE = '''D1: Aviation
+D2: Air systems
+Abs: A cabin air system for aviation electronics comprises a compressor, an air conditioner, a mix manifold, and an aviation electronics module. The compressor compresses ambient air, and the air conditioner cools the compressed ambient air to produce cabin air. The mix manifold delivers some of the cabin air to the electronics module.
+#########
+D1: Memory management
+D2: Distributed computing
+Abs: Computational storage techniques for distribute computing are disclosed. The computational storage server receives input from multiple clients, which is used by the server when executing one or more computation functions. The computational storage server can aggregate multiple client inputs before applying one or more computation functions. The computational storage server sets up: a first memory area for storing input received from multiple clients; a second memory area designated for storing the computation functions to be executed by the computational storage server using the input data received from the multiple clients; a client specific memory management area for storing metadata related to computations performed by the computational storage server for specific clients; and a persistent storage area for storing checkpoints associated with aggregating computations performed by the computation functions.
+#########
+D1: {}
+D2: {}
+Abs:'''
