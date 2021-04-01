@@ -76,19 +76,22 @@ class NPParser:
         # Remove stopwords from np
         df['np_clean'] = df.np_raw.apply(self.clean_np)
         #Drop nps that were completely eliminated by the earlier step.
-        df = df.dropna()
+        df = df.dropna(subset=['np_clean', 'np_raw'])
         # Convert raw nps to text
         df['np_raw'] = df.np_raw.apply(lambda tokens: ''.join([t.text_with_ws for t in tokens]))
 
         df['in_blocklist'] = df.np_clean.apply(
             lambda noun_phrase: any([i.lower() in self.blocklist for i in re.split('\s', noun_phrase.strip())]))
 
-        return df[~df.in_blocklist].dropna().reset_index(drop=True)
+        return df[~df.in_blocklist].dropna(subset=['in_blocklist']).reset_index(drop=True)
 
     def prep_report(self, df, group: str, cols: list):
-        new_df = df.groupby(group).apply(lambda g: pd.Series([set(g[c].values) for c in cols])).reset_index()
-        new_df.columns = [group] + cols
-        return new_df
+        if len(df.dropna(subset=[group])) > 0:
+            new_df = df.groupby(group).apply(lambda g: pd.Series([set(g[c].values) for c in cols])).reset_index()
+            new_df.columns = [group] + cols
+            return new_df
+        else:
+            return None
 
     def report(self, s):
         nps = self._get_nps(s, **self.config)
@@ -99,11 +102,20 @@ class NPParser:
         return {'main': nps,
                 'nps': {'all': np_groups,
                         'multiple': np_groups[np_groups.apply(lambda x: len(x.num) > 1, axis=1)]
-                        },
+                        } if isinstance(np_groups, pd.DataFrame) else None,
                 'nums': {'all': num_groups,
                          'multiple': num_groups[num_groups.apply(lambda x: len(x.np_clean) > 1, axis=1)]
-                         }
+                         } if isinstance(num_groups, pd.DataFrame) else None
                 }
 
+    '''
+    Broken: handle None type
+    '''
     def report_json(self, s):
         return serialize_report(self.report(s))
+
+
+if __name__ == '__main__':
+    p = NPParser(spacy_model='en_core_web_sm')
+    txt = 'The present disclosure is concerned with a visual apparatus and a method for creation of artificial vision. In particular, the present disclosure provides an interface and method for controlling a visual prosthesis (i.e. device) implanted in an individual patient (i.e. subject) to create artificial vision. FIG. 1 shows a visual prosthesis apparatus'
+    p.report(txt)

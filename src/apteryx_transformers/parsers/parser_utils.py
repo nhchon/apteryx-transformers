@@ -46,6 +46,7 @@ def serialize_report(d):
             new_d[k] = serialize_report(v)
         else:
             new_d[k] = v.to_json(orient = 'records')
+
     return json.dumps(new_d)
 
 def is_json(s):
