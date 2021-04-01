@@ -58,7 +58,11 @@ BLOCKLIST = ['fig',
              'sept',
              'oct',
              'nov',
-             'dec']
+             'dec',
+             'ie.',
+             'i.e.',
+             'eg.',
+             'e.g.', ]
 
 IDEATION_PROMPT_TEMPLATE = '''D1: Aviation
 D2: Air systems
