@@ -41,13 +41,26 @@ def remove_tables(s, severity=0):
 
 def serialize_report(d):
     new_d = dict()
-    for k,v in d.items():
+    for k, v in d.items():
         if isinstance(v, dict):
             new_d[k] = serialize_report(v)
+        elif isinstance(v, pd.DataFrame):
+            new_d[k] = v.to_json(orient='records')
+        elif v == None:
+            new_d[k] = ''
+        elif isinstance(v, str):
+            new_d[k] = v
         else:
-            new_d[k] = v.to_json(orient = 'records') if v else ''
+            # Last ditch attempt at serialization
+            try:
+                brute_force = json.dumps(v)
+                new_d[k] = brute_force
+            except:
+                print(f"Couldn't serialize this: {v}")
+                new_d[k] = ''
 
     return json.dumps(new_d)
+
 
 def is_json(s):
     try:
@@ -56,9 +69,10 @@ def is_json(s):
     except:
         return False
 
+
 def deserialize_nested(s):
     if isinstance(s, dict):
-        return {k:deserialize_nested(v) for k,v in s.items()}
+        return {k: deserialize_nested(v) for k, v in s.items()}
     elif isinstance(s, list):
         return [deserialize_nested(i) for i in s]
     elif isinstance(s, str):
