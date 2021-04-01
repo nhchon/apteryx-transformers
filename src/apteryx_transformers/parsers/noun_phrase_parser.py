@@ -4,7 +4,7 @@ import spacy
 import string
 
 from apteryx_transformers.parsers.parser_utils import remove_tables, serialize_report, deserialize_nested
-from apteryx_transformers.GLOBALS import BLOCKLIST
+from apteryx_transformers.GLOBALS import BLOCKLIST, STRIPLIST
 
 
 '''
@@ -33,7 +33,10 @@ class NPParser:
                                                                     t.text_with_ws.lower() in self.blocklist])]
         if clean:
             #Join text and remove l/r whitespace, if any.
-            return ''.join(clean).strip()
+            clean_txt = ''.join(clean).strip()
+            for s in STRIPLIST:
+                clean_txt = clean_txt.replace(s.upper(), '')
+            return clean_txt
         else:
             return None
 
