@@ -45,7 +45,7 @@ def serialize_report(d):
         if isinstance(v, dict):
             new_d[k] = serialize_report(v)
         else:
-            new_d[k] = v.to_json(orient = 'records')
+            new_d[k] = v.to_json(orient = 'records') if v else ''
 
     return json.dumps(new_d)
 
