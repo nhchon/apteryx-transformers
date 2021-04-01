@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from torch.utils import data
 
 from collators import DataCollatorForDocumentClassificationBATCH
-from datasets import PickleDatasetFromDisk
+from apteryx_datasets import PickleDatasetFromDisk
 from transformers import (Trainer,
                           TrainingArguments)
 from transformers import EarlyStoppingCallback

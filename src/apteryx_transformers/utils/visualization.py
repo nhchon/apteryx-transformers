@@ -7,7 +7,7 @@ from transformers import Trainer
 
 from .smooth_gradient import SmoothGradient
 
-from ..datasets import BalancedDataset
+from ..apteryx_datasets import BalancedDataset
 from ..collators import DataCollatorForDocumentClassificationBATCH
 
 # ----------------------------------------------------------------------------------------------------------------------------------
