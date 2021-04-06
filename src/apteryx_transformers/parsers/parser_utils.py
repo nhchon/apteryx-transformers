@@ -4,6 +4,7 @@ import string
 import pandas as pd
 import numpy as np
 import json
+from copy import deepcopy
 
 
 def fuzzy_extract(qs, ls, threshold):
@@ -82,3 +83,29 @@ def deserialize_nested(s):
             return s
     else:
         return s
+
+def get_start_stop(df, txt):
+    t_cp = deepcopy(txt)
+    offset = 0
+    start_stops = []
+    for idx, r in df.iterrows():
+        np_raw = r.np_raw
+        if np_raw in t_cp:
+            start = t_cp.index(np_raw)
+            end = start + len(np_raw)
+
+            print(t_cp[start:end])
+            print(txt[start + offset:end + offset])
+            start_stops.append([start + offset, end + offset])
+
+            t_cp = t_cp[end:]
+            offset += end
+
+        else:
+            start_stops.append([None, None])
+
+    ss = pd.DataFrame.from_records(start_stops)
+    ss.columns = ['start', 'stop']
+    df['start'] = ss.start
+    df['stop'] = ss.stop
+    return df

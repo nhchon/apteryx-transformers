@@ -3,9 +3,11 @@ import regex as re
 import spacy
 import string
 
-from apteryx_transformers.parsers.parser_utils import remove_tables, serialize_report, deserialize_nested
+from apteryx_transformers.parsers.parser_utils import (remove_tables,
+                                                       serialize_report,
+                                                       deserialize_nested,
+                                                       get_start_stop)
 from apteryx_transformers.GLOBALS import BLOCKLIST, STRIPLIST
-
 
 '''
 ^ : start at beginning of string
@@ -18,7 +20,7 @@ DEFAULT_CONFIG = {"window": 5, "remove_table_text": True, "severity": 0}
 
 
 class NPParser:
-    def __init__(self, spacy_model='en_core_web_lg', add_to_blocklist:list = [], config=DEFAULT_CONFIG):
+    def __init__(self, spacy_model='en_core_web_lg', add_to_blocklist: list = [], config=DEFAULT_CONFIG):
         print('Initializing!')
         print(f'Loading spacy model: {spacy_model}')
         self.nlp = spacy.load(spacy_model)
@@ -26,13 +28,12 @@ class NPParser:
         print(self.blocklist)
         self.config = config
 
-
     def clean_np(self, tokens):
         clean = [t.text_with_ws.upper() for t in tokens if not any([t.is_stop,
                                                                     t.is_punct,
                                                                     t.text_with_ws.lower() in self.blocklist])]
         if clean:
-            #Join text and remove l/r whitespace, if any.
+            # Join text and remove l/r whitespace, if any.
             clean_txt = ''.join(clean).strip()
             for s in STRIPLIST:
                 clean_txt = clean_txt.replace(s.upper(), '')
@@ -62,11 +63,11 @@ class NPParser:
             tok_end = chunk.end
             next_text = ''.join([t.text_with_ws for t in doc[tok_end:tok_end + window]])
 
-            #Detect following number.
+            # Detect following number.
             num_match = re.match(NUM_PATTERN, next_text)
             if num_match:
                 group = num_match.group(1)
-                #Iteratively remove punctuation from the match, if found.
+                # Iteratively remove punctuation from the match, if found.
                 while group[-1] in string.punctuation:
                     group = group[:-1]
                 num_match = group
@@ -78,10 +79,12 @@ class NPParser:
 
         # Remove stopwords from np
         df['np_clean'] = df.np_raw.apply(self.clean_np)
-        #Drop nps that were completely eliminated by the earlier step.
+        # Drop nps that were completely eliminated by the earlier step.
         df = df.dropna(subset=['np_clean', 'np_raw'])
         # Convert raw nps to text
         df['np_raw'] = df.np_raw.apply(lambda tokens: ''.join([t.text_with_ws for t in tokens]))
+
+        df = get_start_stop(df, s)
 
         df['in_blocklist'] = df.np_clean.apply(
             lambda noun_phrase: any([i.lower() in self.blocklist for i in re.split('\s', noun_phrase.strip())]))
@@ -114,6 +117,7 @@ class NPParser:
     '''
     Broken: handle None type
     '''
+
     def report_json(self, s):
         return serialize_report(self.report(s))
 
