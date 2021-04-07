@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import json
 from copy import deepcopy
+import re
 
 
 def fuzzy_extract(qs, ls, threshold):
@@ -85,27 +86,12 @@ def deserialize_nested(s):
         return s
 
 def get_start_stop(df, txt):
-    t_cp = deepcopy(txt)
-    offset = 0
-    start_stops = []
-    for idx, r in df.iterrows():
-        np_raw = r.np_raw
-        if np_raw in t_cp:
-            start = t_cp.index(np_raw)
-            end = start + len(np_raw)
+    df[['start', 'end']] = None
+    for noun_phrase in df.np_raw.unique():
+        start_ends = [[m.start(), m.end()] for m in re.finditer(re.escape(noun_phrase), txt)]
 
-            print(t_cp[start:end])
-            print(txt[start + offset:end + offset])
-            start_stops.append([start + offset, end + offset])
-
-            t_cp = t_cp[end:]
-            offset += end
-
-        else:
-            start_stops.append([None, None])
-
-    ss = pd.DataFrame.from_records(start_stops)
-    ss.columns = ['start', 'stop']
-    df['start'] = ss.start
-    df['stop'] = ss.stop
+        np_idxs = df[df.np_raw == noun_phrase].index.values
+        for idx, (start, end) in zip(np_idxs, start_ends):
+            df.loc[idx,'start'] = start
+            df.loc[idx,'end'] = end
     return df
