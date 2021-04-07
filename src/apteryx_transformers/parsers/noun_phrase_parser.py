@@ -2,6 +2,7 @@ import pandas as pd
 import regex as re
 import spacy
 import string
+from copy import deepcopy
 
 from apteryx_transformers.parsers.parser_utils import (remove_tables,
                                                        serialize_report,
@@ -25,12 +26,13 @@ class NPParser:
         print(f'Loading spacy model: {spacy_model}')
         self.nlp = spacy.load(spacy_model)
         self.blocklist = BLOCKLIST + add_to_blocklist
-        print(self.blocklist)
+        print(f'Blocklist: {self.blocklist}')
         self.config = config
 
     def clean_np(self, tokens):
         clean = [t.text_with_ws.upper() for t in tokens if not any([t.is_stop,
-                                                                    t.is_punct,
+                                                                    #Allow hyphen exception
+                                                                    (t.is_punct and not t.text == '-'),
                                                                     t.text_with_ws.lower() in self.blocklist])]
         if clean:
             # Join text and remove l/r whitespace, if any.
@@ -46,7 +48,7 @@ class NPParser:
         return self.config
 
     def get_nps(self, s):
-        return self._get_nps(s, **self.config)
+        return get_start_stop(self._get_nps(s, **self.config), s)
 
     def _get_nps(self, s, window=5, remove_table_text=True, severity=0):
         '''
@@ -80,11 +82,9 @@ class NPParser:
         # Remove stopwords from np
         df['np_clean'] = df.np_raw.apply(self.clean_np)
         # Drop nps that were completely eliminated by the earlier step.
-        df = df.dropna(subset=['np_clean', 'np_raw'])
+        df = df.dropna(subset=['np_clean', 'np_raw']).reset_index(drop=True)
         # Convert raw nps to text
         df['np_raw'] = df.np_raw.apply(lambda tokens: ''.join([t.text_with_ws for t in tokens]))
-
-        df = get_start_stop(df, s)
 
         df['in_blocklist'] = df.np_clean.apply(
             lambda noun_phrase: any([i.lower() in self.blocklist for i in re.split('\s', noun_phrase.strip())]))
@@ -95,15 +95,17 @@ class NPParser:
         if len(df.dropna(subset=[group])) > 0:
             new_df = df.groupby(group).apply(lambda g: pd.Series([set(g[c].values) for c in cols])).reset_index()
             new_df.columns = [group] + cols
+            new_df['start'] = new_df.start.apply(lambda s: sorted(list(s)))
+            new_df['end'] = new_df.end.apply(lambda s: sorted(list(s)))
             return new_df
         else:
             return None
 
     def report(self, s):
-        nps = self._get_nps(s, **self.config)
+        nps = self.get_nps(s)
 
-        np_groups = self.prep_report(nps, 'np_clean', ['num', 'np_raw'])
-        num_groups = self.prep_report(nps, 'num', ['np_clean', 'np_raw'])
+        np_groups = self.prep_report(nps, 'np_clean', ['num', 'np_raw', 'start', 'end'])
+        num_groups = self.prep_report(nps, 'num', ['np_clean', 'np_raw', 'start', 'end'])
 
         return {'main': nps,
                 'nps': {'all': np_groups,
