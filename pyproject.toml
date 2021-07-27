@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "apteryx-transformers"
+version = "0.1.0"
+description = ""
+authors = ["mgbvox <mgbvox@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.10"
+transformers = "^4.9.1"
+torch = "^1.9.0"
+torchvision = "^0.10.0"
+torchaudio = "^0.9.0"
+dill = "^0.3.4"
+fuzzysearch = "^0.7.3"
+fuzzywuzzy = "^0.18.0"
+matplotlib = "^3.4.2"
+numpy = "^1.21.1"
+scikit-learn = "^0.24.2"
+scipy = "^1.7.0"
+sentence-transformers = "^2.0.0"
+setuptools = "^57.4.0"
+tqdm = "^4.61.2"
+
+[tool.poetry.dev-dependencies]
+pigar = "^0.10.0"
+pytest = "^6.2.4"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

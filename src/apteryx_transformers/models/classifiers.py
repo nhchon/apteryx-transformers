@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-import comet_ml
 import numpy as np
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from torch.utils import data
@@ -147,17 +146,16 @@ class AbstractMultiClassifier(ABC):
             except:
                 print('Encountered an error logging confusion matrix!')
 
-        experiment = comet_ml.config.get_global_experiment()
         labels = pred.label_ids
         preds = pred.predictions.argmax(-1)
-        precision, recall, f1, _ = precision_recall_fscore_support(labels, preds, average='macro')
+        precision, recall, f1s, _ = precision_recall_fscore_support(labels, preds, average='macro')
         acc = accuracy_score(labels, preds)
 
         try:
             confusion_matrix_to_log = confusion_matrix(labels, preds)
             save_confusion_matrix(confusion_matrix_to_log)
 
-            experiment.log_confusion_matrix(labels, preds)
+
 
 
         except:
