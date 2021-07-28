@@ -94,7 +94,7 @@ class NPParser:
 
     def prep_report(self, df, group: str, cols: list):
         if len(df.dropna(subset=[group])) > 0:
-            new_df = df.groupby(group).apply(lambda g: pd.Series([set(g[c].values) for c in cols])).reset_index()
+            new_df = df.groupby(group).apply(lambda g: pd.Series([list(set(g[c].values)) for c in cols])).reset_index()
             new_df.columns = [group] + cols
             new_df['start'] = new_df.start.apply(lambda s: sorted(list(s)))
             new_df['end'] = new_df.end.apply(lambda s: sorted(list(s)))
@@ -107,14 +107,18 @@ class NPParser:
         np_groups = self.prep_report(nps, 'np_clean', ['num', 'np_raw', 'start', 'end'])
         num_groups = self.prep_report(nps, 'num', ['np_clean', 'np_raw', 'start', 'end'])
 
-        return {'main': nps.to_dict(orient='records'),
-                'nps': {'all': np_groups.to_dict(orient='records'),
-                        'multiple': np_groups[np_groups.apply(lambda x: len(x.num) > 1, axis=1)].to_dict(orient='records')
-                        } if isinstance(np_groups, pd.DataFrame) else None,
-                'nums': {'all': num_groups.to_dict(orient='records'),
-                         'multiple': num_groups[num_groups.apply(lambda x: len(x.np_clean) > 1, axis=1)].to_dict(orient='records')
-                         } if isinstance(num_groups, pd.DataFrame) else None
-                }
+        to_return = {'main': nps.to_dict(orient='records'),
+                     'nps': {'all': np_groups.to_dict(orient='records'),
+                             'multiple': np_groups[np_groups.apply(lambda x: len(x.num) > 1, axis=1)].to_dict(
+                                 orient='records')
+                             } if isinstance(np_groups, pd.DataFrame) else None,
+                     'nums': {'all': num_groups.to_dict(orient='records'),
+                              'multiple': num_groups[num_groups.apply(lambda x: len(x.np_clean) > 1, axis=1)].to_dict(
+                                  orient='records')
+                              } if isinstance(num_groups, pd.DataFrame) else None
+                     }
+
+        return to_return
 
     '''
     Broken: handle None type
