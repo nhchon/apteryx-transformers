@@ -2,11 +2,10 @@ import pandas as pd
 import regex as re
 import spacy
 import string
+import json
 from copy import deepcopy
 
 from apteryx_transformers.parsers.parser_utils import (remove_tables,
-                                                       serialize_report,
-                                                       deserialize_nested,
                                                        get_start_stop)
 from apteryx_transformers.GLOBALS import BLOCKLIST, STRIPLIST
 
@@ -31,7 +30,7 @@ class NPParser:
 
     def clean_np(self, tokens):
         clean = [t.text_with_ws.upper() for t in tokens if not any([t.is_stop,
-                                                                    #Allow hyphen exception
+                                                                    # Allow hyphen exception
                                                                     (t.is_punct and not t.text == '-'),
                                                                     t.text_with_ws.lower() in self.blocklist])]
         if clean:
@@ -48,7 +47,9 @@ class NPParser:
         return self.config
 
     def get_nps(self, s):
-        return get_start_stop(self._get_nps(s, **self.config), s)
+        start_stop = get_start_stop(self._get_nps(s, **self.config), s)
+
+        return start_stop
 
     def _get_nps(self, s, window=5, remove_table_text=True, severity=0):
         '''
@@ -103,16 +104,15 @@ class NPParser:
 
     def report(self, s):
         nps = self.get_nps(s)
-
         np_groups = self.prep_report(nps, 'np_clean', ['num', 'np_raw', 'start', 'end'])
         num_groups = self.prep_report(nps, 'num', ['np_clean', 'np_raw', 'start', 'end'])
 
-        return {'main': nps,
-                'nps': {'all': np_groups,
-                        'multiple': np_groups[np_groups.apply(lambda x: len(x.num) > 1, axis=1)]
+        return {'main': nps.to_dict(orient='records'),
+                'nps': {'all': np_groups.to_dict(orient='records'),
+                        'multiple': np_groups[np_groups.apply(lambda x: len(x.num) > 1, axis=1)].to_dict(orient='records')
                         } if isinstance(np_groups, pd.DataFrame) else None,
-                'nums': {'all': num_groups,
-                         'multiple': num_groups[num_groups.apply(lambda x: len(x.np_clean) > 1, axis=1)]
+                'nums': {'all': num_groups.to_dict(orient='records'),
+                         'multiple': num_groups[num_groups.apply(lambda x: len(x.np_clean) > 1, axis=1)].to_dict(orient='records')
                          } if isinstance(num_groups, pd.DataFrame) else None
                 }
 
@@ -121,7 +121,8 @@ class NPParser:
     '''
 
     def report_json(self, s):
-        return serialize_report(self.report(s))
+        return self.report(s)
+        # return serialize_report(self.report(s))
 
 
 if __name__ == '__main__':

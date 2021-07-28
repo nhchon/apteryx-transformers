@@ -41,29 +41,6 @@ def remove_tables(s, severity=0):
     return '\n'.join(df[df.table_score > severity].line.values)
 
 
-def serialize_report(d):
-    new_d = dict()
-    for k, v in d.items():
-        if isinstance(v, dict):
-            new_d[k] = serialize_report(v)
-        elif isinstance(v, pd.DataFrame):
-            new_d[k] = v.to_json(orient='records')
-        elif v == None:
-            new_d[k] = ''
-        elif isinstance(v, str):
-            new_d[k] = v
-        else:
-            # Last ditch attempt at serialization
-            try:
-                brute_force = json.dumps(v)
-                new_d[k] = brute_force
-            except:
-                print(f"Couldn't serialize this: {v}")
-                new_d[k] = ''
-
-    return json.dumps(new_d)
-
-
 def is_json(s):
     try:
         _ = json.loads(s)
@@ -72,19 +49,6 @@ def is_json(s):
         return False
 
 
-def deserialize_nested(s):
-    if isinstance(s, dict):
-        return {k: deserialize_nested(v) for k, v in s.items()}
-    elif isinstance(s, list):
-        return [deserialize_nested(i) for i in s]
-    elif isinstance(s, str):
-        if is_json(s):
-            return deserialize_nested(json.loads(s))
-        else:
-            return s
-    else:
-        return s
-
 def get_start_stop(df, txt):
     df[['start', 'end']] = None
     for noun_phrase in df.np_raw.unique():
@@ -92,6 +56,6 @@ def get_start_stop(df, txt):
 
         np_idxs = df[df.np_raw == noun_phrase].index.values
         for idx, (start, end) in zip(np_idxs, start_ends):
-            df.loc[idx,'start'] = start
-            df.loc[idx,'end'] = end
+            df.loc[idx, 'start'] = start
+            df.loc[idx, 'end'] = end
     return df
