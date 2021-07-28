@@ -20,9 +20,8 @@ TC_COUNT_MAP = {2800: 1043341, 3700: 584685, 2600: 525022, 3600: 504068, 1700: 4
                 4600: 2, 5100: 1, 5400: 1, 4500: 1, 9700: 1, 6500: 1, 500: 1, 6700: 1, 8600: 1, 4000: 1, 4800: 1,
                 8800: 1, 1400: 1, 400: 1, 7200: 1}
 
-TC_TOTAL = 4049012  # sum(TC_COUNT_MAP.values())
+TC_TOTAL = 4049012 
 
-GPT3_KEY = 'sk-yM3CMLAJYwBBYwtCHGV43AVA8C5OZSMvAxjjkl4O'
 
 BLOCKLIST = ['fig',
              'fig.',
