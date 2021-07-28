@@ -128,4 +128,4 @@ class NPParser:
 if __name__ == '__main__':
     p = NPParser(spacy_model='en_core_web_sm')
     txt = 'The present disclosure is concerned with a visual apparatus and a method for creation of artificial vision. In particular, the present disclosure provides an interface and method for controlling a visual prosthesis (i.e. device) implanted in an individual patient (i.e. subject) to create artificial vision. FIG. 1 shows a visual prosthesis apparatus'
-    p.report(txt)
+    print(p.report_json(txt))
