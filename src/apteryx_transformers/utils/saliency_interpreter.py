@@ -6,12 +6,7 @@ import matplotlib.pyplot as plt
 
 
 class SaliencyInterpreter:
-    def __init__(self,
-                 model,
-                 criterion,
-                 tokenizer,
-                 show_progress=True,
-                 **kwargs):
+    def __init__(self, model, criterion, tokenizer, show_progress=True, **kwargs):
 
         """
         :param model: nn.Module object - can be HuggingFace's model or custom one.
@@ -23,7 +18,7 @@ class SaliencyInterpreter:
                 if your model doesn't have 'get_input_embeddings' method to get access to encoder embeddings
         """
 
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = model.to(self.device)
         self.model.eval()
         self.criterion = criterion
@@ -79,8 +74,10 @@ class SaliencyInterpreter:
             embedding_layer = self.model.get_input_embeddings()
         else:
             encoder_attribute = self.kwargs.get("encoder")
-            assert encoder_attribute, "Your model doesn't have 'get_input_embeddings' method, thus you " \
+            assert encoder_attribute, (
+                "Your model doesn't have 'get_input_embeddings' method, thus you "
                 "have provide 'encoder' key argument while initializing SaliencyInterpreter object"
+            )
             embedding_layer = getattr(self.model, encoder_attribute).embeddings
         return embedding_layer
 
@@ -91,10 +88,12 @@ class SaliencyInterpreter:
         word_cmap = matplotlib.cm.Wistia
         prob_cmap = matplotlib.cm.Wistia
         template = '<span class="barcode"; style="color: black; background-color: {}">{}</span>'
-        colored_string = ''
+        colored_string = ""
         # Use a matplotlib normalizer in order to make clearer the difference between values
-        normalized_and_mapped = matplotlib.cm.ScalarMappable(cmap=word_cmap).to_rgba(instance['grad'])
-        for word, color in zip(instance['tokens'], normalized_and_mapped):
+        normalized_and_mapped = matplotlib.cm.ScalarMappable(cmap=word_cmap).to_rgba(
+            instance["grad"]
+        )
+        for word, color in zip(instance["tokens"], normalized_and_mapped):
             if word in special_tokens and skip_special_tokens:
                 continue
             # handle wordpieces
@@ -102,10 +101,14 @@ class SaliencyInterpreter:
             word = word.replace("Ċ", "\n")
             color = matplotlib.colors.rgb2hex(color[:3])
             colored_string += template.format(color, word)
-        colored_string += template.format(0, "    Label: {} |".format(class_map[int(instance['label'])]))
-        prob = instance['prob']
+        colored_string += template.format(
+            0, "    Label: {} |".format(class_map[int(instance["label"])])
+        )
+        prob = instance["prob"]
         color = matplotlib.colors.rgb2hex(prob_cmap(prob)[:3])
-        colored_string += template.format(color, "{:.2f}%".format(instance['prob']*100)) + '|'
+        colored_string += (
+            template.format(color, "{:.2f}%".format(instance["prob"] * 100)) + "|"
+        )
         return colored_string
 
     @property
@@ -129,7 +132,7 @@ class SaliencyInterpreter:
         :param batch: batch returned by dataloader
         :return: torch.Tensor: batch loss
         """
-        input_ids = batch.get('input_ids').to(self.device)
+        input_ids = batch.get("input_ids").to(self.device)
         attention_mask = batch.get("attention_mask").to(self.device)
         outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)[0]
 
@@ -154,8 +157,7 @@ class SaliencyInterpreter:
         probs, labels = torch.max(probs, dim=-1)
 
         tokens = [
-            self.tokenizer.convert_ids_to_tokens(input_ids_)
-            for input_ids_ in input_ids
+            self.tokenizer.convert_ids_to_tokens(input_ids_) for input_ids_ in input_ids
         ]
 
         embedding_grads = grads.sum(dim=2)
@@ -172,10 +174,12 @@ class SaliencyInterpreter:
         for example_tokens, example_prob, example_grad, example_label in iterator:
             example_dict = dict()
             # as we do it by batches we has a padding so we need to remove it
-            example_tokens = [t for t in example_tokens if t != self.tokenizer.pad_token]
-            example_dict['tokens'] = example_tokens
-            example_dict['grad'] = example_grad.cpu().tolist()[:len(example_tokens)]
-            example_dict['label'] = example_label.item()
-            example_dict['prob'] = example_prob.item()
+            example_tokens = [
+                t for t in example_tokens if t != self.tokenizer.pad_token
+            ]
+            example_dict["tokens"] = example_tokens
+            example_dict["grad"] = example_grad.cpu().tolist()[: len(example_tokens)]
+            example_dict["label"] = example_label.item()
+            example_dict["prob"] = example_prob.item()
             batch_output.append(example_dict)
         return batch_output

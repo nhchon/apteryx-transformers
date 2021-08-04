@@ -10,14 +10,17 @@ class SmoothGradient(SaliencyInterpreter):
     Interprets the prediction using SmoothGrad (https://arxiv.org/abs/1706.03825)
     Registered as a `SaliencyInterpreter` with name "smooth-gradient".
     """
-    def __init__(self,
-                 model,
-                 criterion,
-                 tokenizer,
-                 stdev=0.01,
-                 num_samples=20,
-                 show_progress=True,
-                 **kwargs):
+
+    def __init__(
+        self,
+        model,
+        criterion,
+        tokenizer,
+        stdev=0.01,
+        num_samples=20,
+        show_progress=True,
+        **kwargs
+    ):
         super().__init__(model, criterion, tokenizer, show_progress, **kwargs)
         # Hyperparameters
         self.stdev = stdev

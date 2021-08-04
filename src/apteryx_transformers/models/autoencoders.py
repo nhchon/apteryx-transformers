@@ -5,9 +5,8 @@ import os
 
 import torch
 from torch.utils import data
-from transformers import (T5ForConditionalGeneration, T5Config, T5TokenizerFast)
-from transformers import (Trainer,
-                          TrainingArguments)
+from transformers import T5ForConditionalGeneration, T5Config, T5TokenizerFast
+from transformers import Trainer, TrainingArguments
 from transformers.modeling_outputs import (
     BaseModelOutput,
     BaseModelOutputWithPastAndCrossAttentions,
@@ -20,18 +19,21 @@ from .t5variants import T5EncoderAggDecoder
 
 
 class AbstractTransformerAutoencoder(ABC):
-    def __init__(self,
-                 dataset,
-                 model_name: str,
-                 model_config_dict: dict,
-                 training_args_dict: dict,
-                 block_size: int,
-                 tokenizer=None,
-                 encoding_vector_size=512,
-                 agg=True,
-                 agg_mode='linear',
-                 train_pct: float = .8, n_layers_to_train: Union[tuple, int] = 0):
-        '''
+    def __init__(
+        self,
+        dataset,
+        model_name: str,
+        model_config_dict: dict,
+        training_args_dict: dict,
+        block_size: int,
+        tokenizer=None,
+        encoding_vector_size=512,
+        agg=True,
+        agg_mode="linear",
+        train_pct: float = 0.8,
+        n_layers_to_train: Union[tuple, int] = 0,
+    ):
+        """
 
         :param dataset: The PyTorch Dataset used for training.
         :param model_name: The huggingface model name (e.g. 't5-small')
@@ -40,13 +42,17 @@ class AbstractTransformerAutoencoder(ABC):
         :param block_size: The input size of the model (in tokens).
         :param train_pct: The percentage of the dataset to use for training; the remainder will be used for eval.
         :param n_layers_to_train: The number of attention layers to train. If a tuple, specifies for encoder and decoder separately.
-        '''
+        """
         self.model_name = model_name
         self.model_name_is_path = os.path.exists(self.model_name)
         if self.model_name_is_path:
-            print(f'Loading model checkpoint from {self.model_name}')
+            print(f"Loading model checkpoint from {self.model_name}")
 
-        self.tokenizer = tokenizer if tokenizer else self.get_tokenizer_class().from_pretrained(self.model_name)
+        self.tokenizer = (
+            tokenizer
+            if tokenizer
+            else self.get_tokenizer_class().from_pretrained(self.model_name)
+        )
         self.collator = self.get_collator_class()()
 
         self.dataset = dataset
@@ -54,25 +60,32 @@ class AbstractTransformerAutoencoder(ABC):
         self.n_layers_to_train = n_layers_to_train
 
         if self.model_name_is_path:
-            self.model = self.get_model_class().from_pretrained(self.model_name,
-                                                                block_size=self.block_size,
-                                                                encoding_vector_size=encoding_vector_size,
-                                                                agg=agg,
-                                                                agg_mode=agg_mode
-                                                                )
+            self.model = self.get_model_class().from_pretrained(
+                self.model_name,
+                block_size=self.block_size,
+                encoding_vector_size=encoding_vector_size,
+                agg=agg,
+                agg_mode=agg_mode,
+            )
             self.config = self.model.config
         else:
-            self.config = self.get_config_class()(
-                **model_config_dict) if model_config_dict else self.get_config_class()()
+            self.config = (
+                self.get_config_class()(**model_config_dict)
+                if model_config_dict
+                else self.get_config_class()()
+            )
             self.config.decoder_start_token_id = self.tokenizer.pad_token_id
 
             # print(type(self.config))
             print(self.config)
 
-            self.model = self.get_model_class()(config=self.config, block_size=self.block_size,
-                                                encoding_vector_size=encoding_vector_size,
-                                                agg=agg,
-                                                agg_mode=agg_mode)
+            self.model = self.get_model_class()(
+                config=self.config,
+                block_size=self.block_size,
+                encoding_vector_size=encoding_vector_size,
+                agg=agg,
+                agg_mode=agg_mode,
+            )
         self.encoder = self.model.encoder
         self.decoder = self.model.decoder
 
@@ -90,15 +103,27 @@ class AbstractTransformerAutoencoder(ABC):
                 assert n_enc_to_train <= self.n_enc_layers
                 assert n_dec_to_train <= self.n_dec_layers
 
-                self.toggle_layer_grad(self.model.encoder.block, n_enc_to_train, layer_acc=self.n_dec_layers)
+                self.toggle_layer_grad(
+                    self.model.encoder.block,
+                    n_enc_to_train,
+                    layer_acc=self.n_dec_layers,
+                )
                 self.toggle_layer_grad(self.model.decoder.block, n_dec_to_train)
 
         elif isinstance(self.n_layers_to_train, int) and self.n_layers_to_train > 0:
-            assert self.total_attn_layers >= self.n_layers_to_train, f"You must select a number of layers to train less than the total number of layers in the model. You selected {self.n_layers_to_train}; there are {self.total_attn_layers} attention layers available."
-            n_dec_to_train = self.n_layers_to_train if self.n_layers_to_train < self.n_dec_layers else self.n_dec_layers
+            assert (
+                self.total_attn_layers >= self.n_layers_to_train
+            ), f"You must select a number of layers to train less than the total number of layers in the model. You selected {self.n_layers_to_train}; there are {self.total_attn_layers} attention layers available."
+            n_dec_to_train = (
+                self.n_layers_to_train
+                if self.n_layers_to_train < self.n_dec_layers
+                else self.n_dec_layers
+            )
             n_enc_to_train = max(self.n_layers_to_train - self.n_dec_layers, 0)
 
-            self.toggle_layer_grad(self.model.encoder.block, n_enc_to_train, layer_acc=self.n_dec_layers)
+            self.toggle_layer_grad(
+                self.model.encoder.block, n_enc_to_train, layer_acc=self.n_dec_layers
+            )
             self.toggle_layer_grad(self.model.decoder.block, n_dec_to_train)
 
         else:
@@ -107,7 +132,9 @@ class AbstractTransformerAutoencoder(ABC):
                 # print(f'Layer {i}: OFF')
                 p.requires_grad = False
 
-        print(f'Autoencoder initialized; training lm_head and {self.n_layers_to_train} Attention Layers.')
+        print(
+            f"Autoencoder initialized; training lm_head and {self.n_layers_to_train} Attention Layers."
+        )
 
         self.training_args = training_args_dict
 
@@ -122,12 +149,12 @@ class AbstractTransformerAutoencoder(ABC):
 
         if n_to_train > 0:
             for layer in module[:-n_to_train]:
-                print(f'Layer {layer_acc}: OFF')
+                print(f"Layer {layer_acc}: OFF")
                 for p in layer.parameters():
                     p.requires_grad = False
                 layer_acc += 1
             for layer in module[-n_to_train:]:
-                print(f'Layer {layer_acc}: ON')
+                print(f"Layer {layer_acc}: ON")
                 for p in layer.parameters():
                     p.requires_grad = True
                 layer_acc += 1
@@ -151,7 +178,7 @@ class AbstractTransformerAutoencoder(ABC):
             evaluation_strategy="steps",
             eval_steps=100,
             fp16=True,  # enable low-precision via AMP
-            gradient_accumulation_steps=5
+            gradient_accumulation_steps=5,
         )
         if self.training_args:
             # Update default training args with specified model training args.
@@ -164,15 +191,17 @@ class AbstractTransformerAutoencoder(ABC):
         N = len(self.dataset)
         n_train = int(N * self.train_pct)
         n_val = N - n_train
-        print(f'Training on {n_train} examples;')
-        print(f'Validating on {n_val} examples.')
+        print(f"Training on {n_train} examples;")
+        print(f"Validating on {n_val} examples.")
         train_ds, eval_ds = data.random_split(self.dataset, (n_train, n_val))
 
-        trainer = Trainer(model=self.model,
-                          args=default_training_args,
-                          data_collator=self.collator,
-                          train_dataset=train_ds,
-                          eval_dataset=eval_ds)
+        trainer = Trainer(
+            model=self.model,
+            args=default_training_args,
+            data_collator=self.collator,
+            train_dataset=train_ds,
+            eval_dataset=eval_ds,
+        )
 
         return trainer
 
@@ -201,22 +230,33 @@ class AbstractTransformerAutoencoder(ABC):
 
 
 class T5AutoEncoder(AbstractTransformerAutoencoder):
-    def __init__(self, dataset, model_name='t5-base', block_size=1024,
-                 encoding_vector_size=512,
-                 tokenizer=None,
-                 agg=True,
-                 agg_mode='linear',
-                 model_config_dict=None,
-                 training_args_dict=None, train_pct=0.8,
-                 n_layers_to_train=(-1, -1)):
-        super().__init__(dataset=dataset, model_name=model_name, model_config_dict=model_config_dict,
-                         training_args_dict=training_args_dict, block_size=block_size,
-                         encoding_vector_size=encoding_vector_size,
-                         tokenizer=tokenizer,
-                         agg=agg,
-                         agg_mode=agg_mode,
-                         train_pct=train_pct,
-                         n_layers_to_train=n_layers_to_train)
+    def __init__(
+        self,
+        dataset,
+        model_name="t5-base",
+        block_size=1024,
+        encoding_vector_size=512,
+        tokenizer=None,
+        agg=True,
+        agg_mode="linear",
+        model_config_dict=None,
+        training_args_dict=None,
+        train_pct=0.8,
+        n_layers_to_train=(-1, -1),
+    ):
+        super().__init__(
+            dataset=dataset,
+            model_name=model_name,
+            model_config_dict=model_config_dict,
+            training_args_dict=training_args_dict,
+            block_size=block_size,
+            encoding_vector_size=encoding_vector_size,
+            tokenizer=tokenizer,
+            agg=agg,
+            agg_mode=agg_mode,
+            train_pct=train_pct,
+            n_layers_to_train=n_layers_to_train,
+        )
 
     def get_model_class(self):
         return T5EncoderAggDecoder

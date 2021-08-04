@@ -10,12 +10,12 @@ import logging
 
 
 class SemanticScorer:
-    def __init__(self, target, model_name='stsb-roberta-large', device='cpu'):
-        logger = logging.Logger('Semantic Scorer')
+    def __init__(self, target, model_name="stsb-roberta-large", device="cpu"):
+        logger = logging.Logger("Semantic Scorer")
 
         self.model = SentenceTransformer(model_name).to(device)
         self.target = target
-        #Cache t_emb to save compute.
+        # Cache t_emb to save compute.
         self.t_emb = self.model.encode(target)
 
     def __call__(self, sequence, target):
@@ -23,4 +23,4 @@ class SemanticScorer:
 
     def similarity(self, sequence, target):
         s_emb = self.model.encode(sequence)
-        return (1 / (cosine(s_emb, self.t_emb)) / np.pi)
+        return 1 / (cosine(s_emb, self.t_emb)) / np.pi

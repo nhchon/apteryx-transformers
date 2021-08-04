@@ -8,24 +8,32 @@ import logging
 
 
 class FluencyScorer:
-    def __init__(self, tok_dir=None, model_dir=None, base_type='gpt2', device='cpu'):
-        logger = logging.Logger('Fluency Scorer')
+    def __init__(self, tok_dir=None, model_dir=None, base_type="gpt2", device="cpu"):
+        logger = logging.Logger("Fluency Scorer")
         if tok_dir and not model_dir:
             logger.warning(
-                f"Custom tokenizer specified ({tok_dir}), but a generic model is being used. Please reconsider unless you know what you're doing.")
-        self.tokenizer = GPT2TokenizerFast.from_pretrained(tok_dir if tok_dir else base_type)
+                f"Custom tokenizer specified ({tok_dir}), but a generic model is being used. Please reconsider unless you know what you're doing."
+            )
+        self.tokenizer = GPT2TokenizerFast.from_pretrained(
+            tok_dir if tok_dir else base_type
+        )
         if not self.tokenizer.pad_token_id:
             self.tokenizer.pad_token = self.tokenizer.eos_token
-        self.model = GPT2LMHeadModel.from_pretrained(model_dir if model_dir else base_type).to(device)
+        self.model = GPT2LMHeadModel.from_pretrained(
+            model_dir if model_dir else base_type
+        ).to(device)
 
     def __call__(self, sentences, stride=10):
         if not isinstance(sentences, list):
             sentences = [sentences]
-        return [{'perplexity': self.perplexity(s, stride=stride), 'sequence': s} for s in sentences]
+        return [
+            {"perplexity": self.perplexity(s, stride=stride), "sequence": s}
+            for s in sentences
+        ]
 
     def perplexity(self, s, stride=10):
         # Thanks huggingface! https://huggingface.co/transformers/perplexity.html
-        encodings = self.tokenizer(s, return_tensors='pt')
+        encodings = self.tokenizer(s, return_tensors="pt")
         max_length = self.model.config.n_positions
 
         lls = []
@@ -52,7 +60,3 @@ class FluencyScorer:
             # Perplexity cannot be calculated on the empty string.
             # Set to infinity to strongly disincentivise.
             return np.inf
-
-
-
-
