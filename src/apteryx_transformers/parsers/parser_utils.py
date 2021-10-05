@@ -55,7 +55,7 @@ def get_start_stop(df, txt):
     df[["start", "end"]] = None
     for noun_phrase in df.np_raw.unique():
         start_ends = [
-            [m.start(), m.end()] for m in re.finditer(re.escape(noun_phrase), txt)
+            [m.start(), m.end()] for m in re.finditer(r'\b' + re.escape(noun_phrase), txt)
         ]
 
         np_idxs = df[df.np_raw == noun_phrase].index.values
